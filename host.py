@@ -1,11 +1,11 @@
+from functools import partial
+from os import getpid
+
 import asyncio
 import logging
 import signal
-from functools import partial
-from os import getpid
-from uuid import uuid4
-
 from aiohttp import web
+from uuid import uuid4
 
 
 class Host:
