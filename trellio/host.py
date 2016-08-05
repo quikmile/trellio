@@ -1,11 +1,11 @@
-from functools import partial
-from os import getpid
-
 import asyncio
 import logging
 import signal
-from aiohttp import web
+from functools import partial
+from os import getpid
 from uuid import uuid4
+
+from aiohttp import web
 
 
 class Host:
@@ -15,6 +15,12 @@ class Host:
 
     _host_name = None
     _host_id = None
+
+    @classmethod
+    def setup(cls, *args, **kwargs):
+        Host.host_name = kwargs.get('host_name')
+        Host.registry_host = kwargs.get('registry_host')
+        Host.registry_port = kwargs.get('registry_port')
 
     @classmethod
     def run(cls):
@@ -32,7 +38,7 @@ class Host:
         http_server = cls._create_http_server()
         if http_server:
             cls._logger.info('Serving HTTP on {}'.format(http_server.sockets[0].getsockname()))
-        cls._logger.info("Event loop running forever, press CTRL+c to interrupt.")
+        cls._logger.info("Event loop running forever, press CTRL+C to interrupt.")
         cls._logger.info("pid %s: send SIGINT or SIGTERM to exit." % getpid())
 
         try:
@@ -68,12 +74,14 @@ class Host:
 
     @classmethod
     def _set_process_name(cls):
+        from setproctitle import setproctitle
         setproctitle('trellio_{}_{}'.format(cls._host_name, cls._host_id))
 
     @classmethod
     def _stop(cls, signame: str):
         cls._logger.info('\ngot signal {} - exiting'.format(signame))
-        asyncio.get_event_loop().stop()
+
+    asyncio.get_event_loop().stop()
 
     @classmethod
     def _set_signal_handlers(cls):

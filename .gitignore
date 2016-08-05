@@ -18,11 +18,9 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
-<<<<<<< HEAD
 
 =======
 .hypothesis/
->>>>>>> af9aa180375583b9bd671c98e7ab8e18bed1640c
 
 # Translations
 *.mo
@@ -67,3 +65,6 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+dist/
+trellio.egg-info/
