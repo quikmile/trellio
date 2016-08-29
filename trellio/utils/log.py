@@ -9,6 +9,7 @@ import yaml
 import sys
 
 from functools import partial, wraps
+from pythonjsonlogger import jsonlogger
 
 RED = '\033[91m'
 BLUE = '\033[94m'
@@ -29,6 +30,16 @@ class CustomTimeLoggingFormatter(logging.Formatter):
             t = datetime.datetime.now().strftime(self.default_time_format)
             s = self.default_msec_format % (t, record.msecs)
         return s
+
+
+class CustomJsonFormatter(jsonlogger.JsonFormatter):
+    def __init__(self, *args, **kwargs):
+        self.extrad = kwargs.pop('extrad', {})
+        super().__init__(*args, **kwargs)
+
+    def add_fields(self, log_record, record, message_dict):
+        message_dict.update(self.extrad)
+        super().add_fields(log_record, record, message_dict)
 
 
 def patch_async_emit(handler: Handler):
@@ -89,12 +100,12 @@ DEFAULT_CONFIG_YAML = """
 
     formatters:
         ctf:
-            (): vyked.utils.log.CustomTimeLoggingFormatter
+            (): trellio.utils.log.CustomTimeLoggingFormatter
             format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
             datefmt: '%Y-%m-%d %H:%M:%S,%f'
 
         cjf:
-            (): vyked.utils.log.CustomJsonFormatter
+            (): trellio.utils.log.CustomJsonFormatter
             format: '{ "timestamp":"%(asctime)s", "message":"%(message)s"}'
             datefmt: '%Y-%m-%d %H:%M:%S,%f'
 
