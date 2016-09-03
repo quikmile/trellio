@@ -154,7 +154,7 @@ class TCPBus:
         #     self._pingers[node_id] = pinger
         #     pinger.register_tcp_service(protocol, node_id)
         #     asyncio.async(pinger.start_ping())
-        self._client_protocols[node_id] = protocol
+        self._client_protocols[node_id] = protocol#stores connection(sockets)
 
     @staticmethod
     def _create_json_service_name(app, service, version):

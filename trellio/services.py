@@ -329,9 +329,10 @@ class _Service:
     def __init__(self, service_name, service_version):
         self._service_name = service_name.lower()
         self._service_version = str(service_version)
-        self._tcp_bus = None
-        self._pubsub_bus = None
-        self._http_bus = None
+        # self._tcp_bus = None
+        # self._pubsub_bus = None
+        # self._http_bus = None
+        self.service_manager = None#changed bus to manager i.e instance of MicroServiceManager
 
     @property
     def name(self):
@@ -358,7 +359,7 @@ class TCPServiceClient(_Service):
     def __init__(self, service_name, service_version, ssl_context=None):
         super(TCPServiceClient, self).__init__(service_name, service_version)
         self._pending_requests = {}
-        self.tcp_bus = None
+
         self._ssl_context = ssl_context
 
     @property
@@ -372,7 +373,7 @@ class TCPServiceClient(_Service):
         request_id = params['request_id']
         self._pending_requests[request_id] = future
         try:
-            self.tcp_bus.send(packet)
+            self.service_manager.transport.send(packet)#changed
         except ClientException:
             if not future.done() and not future.cancelled():
                 error = 'Client not found'
@@ -443,35 +444,35 @@ class _ServiceHost(_Service):
     def node_id(self):
         return self._node_id
 
-    @property
-    def tcp_bus(self):
-        return self._tcp_bus
+    # @property
+    # def tcp_bus(self):
+    #     return self._tcp_bus
 
-    @tcp_bus.setter
-    def tcp_bus(self, bus):
-        for client in self._clients:
-            if isinstance(client, TCPServiceClient):
-                client.tcp_bus = bus
-        self._tcp_bus = bus
+    # @tcp_bus.setter#not needed
+    # def tcp_bus(self, bus):
+    #     for client in self._clients:
+    #         if isinstance(client, TCPServiceClient):
+    #             client.tcp_bus = bus
+    #     self._tcp_bus = bus
 
-    @property
-    def http_bus(self):
-        return self._http_bus
+    # @property#not needed
+    # def http_bus(self):
+    #     return self._http_bus
 
-    @http_bus.setter
-    def http_bus(self, bus):
-        for client in self._clients:
-            if isinstance(client, HTTPServiceClient):
-                client._http_bus = self._http_bus
-        self._http_bus = bus
-
-    @property
-    def pubsub_bus(self):
-        return self._pubsub_bus
-
-    @pubsub_bus.setter
-    def pubsub_bus(self, bus):
-        self._pubsub_bus = bus
+    # @http_bus.setter#not needed
+    # def http_bus(self, bus):
+    #     for client in self._clients:
+    #         if isinstance(client, HTTPServiceClient):
+    #             client._http_bus = self._http_bus
+    #     self._http_bus = bus
+    #
+    # @property
+    # def pubsub_bus(self):
+    #     return self._pubsub_bus
+    #
+    # @pubsub_bus.setter
+    # def pubsub_bus(self, bus):
+    #     self._pubsub_bus = bus
 
     @property
     def clients(self):
@@ -494,9 +495,10 @@ class _ServiceHost(_Service):
         return self._port
 
     def initiate(self):
-        self.tcp_bus.register()
-        yield from self.pubsub_bus.create_pubsub_handler()
-        async(self.pubsub_bus.register_for_subscription(self.host, self.port, self.node_id, self.clients))
+        yield from self.service_manager.initiate()
+        # self.tcp_bus.register()#not needed
+        # yield from self.pubsub_bus.create_pubsub_handler()
+        # async(self.pubsub_bus.register_for_subscription(self.host, self.port, self.node_id, self.clients))
 
 
 class TCPService(_ServiceHost):
@@ -508,11 +510,12 @@ class TCPService(_ServiceHost):
     def ssl_context(self):
         return self._ssl_context
 
-    def _publish(self, endpoint, payload):
-        self._pubsub_bus.publish(self.name, self.version, endpoint, payload)
+    def _publish(self, endpoint, payload):#changed
+        self.service_manager.pub_sub.publish(self.name, self.version, endpoint, payload)
 
-    def _xpublish(self, endpoint, payload, strategy):
-        self._pubsub_bus.xpublish(self.name, self.version, endpoint, payload, strategy)
+    def _xpublish(self, endpoint, payload, strategy):#changed
+        self.service_manager.pub_sub.xpublish(self.name, self.version, endpoint, payload, strategy)
+        # self._pubsub_bus.xpublish(self.name, self.version, endpoint, payload, strategy)
 
     @staticmethod
     def _make_response_packet(request_id: str, from_id: str, entity: str, result: object, error: object,
@@ -575,6 +578,6 @@ class HTTPServiceClient(_Service):
         super(HTTPServiceClient, self).__init__(service_name, service_version)
 
     def _send_http_request(self, app_name, method, entity, params):
-        response = yield from self._http_bus.send_http_request(app_name, self.name, self.version, method, entity,
-                                                               params)
+        response = yield from self.service_manager.http.send_http_request(app_name, self.name, self.version, method, entity,
+                                                               params)#changed
         return response

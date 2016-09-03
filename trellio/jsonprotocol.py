@@ -70,7 +70,7 @@ class JSONProtocol(asyncio.Protocol):
             self.set_streamer()
 
     def on_object_stream_start(self):
-        raise RuntimeError('Incorrect JSON Streaming Format: expect a JSON Array to start at root, got object')
+        raise RuntimeError('Incorrect JSON Streaming Formalt: expect a JSON Array to start at root, got object')
 
     def on_object_stream_end(self):
         del self._obj_streamer
