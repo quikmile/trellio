@@ -1,5 +1,5 @@
 1 - Implement managers and retry_system as fast possible.
 2 - Retry system should run separately like registry if possible.
-3 - Provide process level access to retry system(#toreseach), so self-healing, error correction, low-level logging can be done.
+3 - Provide process level access to retry system(#toresearch), so self-healing, error correction, low-level logging can be done.
 4 - Host shouldn't have any info about service, only registry.
 5 - Prototype user service, for testing new systems.
