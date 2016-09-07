@@ -9,3 +9,4 @@ Minor standards to follow.
 1 - Use process pool or thread pool executor for all independent tasks instead of yield or await (always better results).
 2 - Service should be allowed to any database query model i.e orm, raw or mixed.
 3 - Instead of directly assigning ports, routes etc directly in code, use NETWORK_RESOURCES, datastructure(#todo).
+4 - Use asyncio.sleep(0), as much as possible, in 3.5.
