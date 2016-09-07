@@ -70,7 +70,12 @@ class Host:
             cls._tcp_service = service
         else:
             cls._logger.error('Invalid argument attached as service')
-        cls._set_bus(service)
+        #cls._set_bus(service)#removed not needed
+        cls._initiate_manager(service)
+
+    @classmethod
+    def _initiate_manager(service):#dangerous methods, order of method calls should be maintained, otherwise race conditions
+        pass
 
     @classmethod
     def attach_http_service(cls, http_service: HTTPService):

@@ -77,7 +77,7 @@ class RegistryClient:
 
     @retry(should_retry_for_result=_retry_for_result, should_retry_for_exception=_retry_for_exception,
            strategy=[0, 2, 4, 8, 16, 32])
-    def connect(self):
+    def connect(self):#re-implement this method for monitoring and shit
         self._transport, self._protocol = yield from self._loop.create_connection(partial(get_trellio_protocol, self),
                                                                                   self._host, self._port,
                                                                                   ssl=self._ssl_context)

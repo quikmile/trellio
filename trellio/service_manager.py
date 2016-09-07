@@ -14,7 +14,7 @@ class HttpManager:
         pass
 
 class MicroServiceManager:
-
+    #who'll set transport
     def __init__(self, connection_types=()):#connectoin types - tcp,pub-sub,http and http is enabled by default
         connection_types = (i.strip().lower() for i in connection_types)
         if 'tcp' in connection_types:
