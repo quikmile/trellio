@@ -4,6 +4,7 @@ import asyncio
 
 from aiohttp import request
 
+from trellio.utils.helpers import get_class_that_defined_method
 from .packet import ControlPacket
 import logging
 import functools
@@ -69,7 +70,45 @@ class ServiceRetrySystem:
             self._handler.on_timeout()
 
 
-class TCPPinger:
+def httpservicehealer_wrapper(catch_exceptions=()):
+    def decorator(func):
+        h = HTTPServiceHealer(func, catch_exceptions)
+        return h.get_healed()
+
+class HTTPServiceHealer:
+    def __init__(self, _method, catch_exceptions=()):
+        self.method_to_heal = _method
+        self.catch_exceptions = catch_exceptions
+
+    def control_exceptions(self, func, service_inst,*args, **kwargs):
+        if self.catch_exceptions:
+            try:
+                return func(service_inst, *args, **kwargs)
+            except self.catch_exceptions:
+                    return self.handle_exceptions()
+        else:
+            return func(service_inst, *args, **kwargs)
+
+    def handle_exception(self):
+        pass#todo discussion
+
+    def endpoint_request(self, *args, **kwargs):
+        #e.g healind_middleware1.process_request()
+        pass#todo, similar to concept of middlewares, we can create arbitrary number of classes
+
+    def endpoint_return(self, *args, **kwargs):
+        pass
+
+    def get_healed(self):
+        service = get_class_that_defined_method(self.method_to_heal)
+        clo_self = self
+        def healed(self, *args, **kwargs):
+            clo_self.endpoint_request(*args, **kwargs)
+            resp = clo_self.method_to_heal(self, *args, **kwargs)
+            clo_self.endpoint_return(*args, **kwargs)
+        return healed
+
+class TCPPinger:#not needed
     logger = logging.getLogger(__name__)
 
     def __init__(self, host, port, node_id, protocol, handler):
