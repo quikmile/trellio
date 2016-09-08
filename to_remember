@@ -3,3 +3,10 @@
 3 - Provide process level access to retry system(#toresearch), so self-healing, error correction, low-level logging can be done.
 4 - Host shouldn't have any info about service, only registry.
 5 - Prototype user service, for testing new systems.
+6 - We have to implement network based concurrency(locking and crap), where a service(processes) can be scheduled by Retry system.
+
+Minor standards to follow.
+1 - Use process pool or thread pool executor for all independent tasks instead of yield or await (always better results).
+2 - Service should be allowed to any database query model i.e orm, raw or mixed.
+3 - Instead of directly assigning ports, routes etc directly in code, use NETWORK_RESOURCES, datastructure(#todo).
+4 - Use asyncio.sleep(0), as much as possible, in 3.5.
