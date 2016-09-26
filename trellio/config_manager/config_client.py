@@ -24,7 +24,7 @@ class ConfigClient:#assign it at the end of class
 
     def get_file_content(self):
         try:
-            urllib2.urlopen(self.config_file, filename=self.file_name)
+            return urllib2.urlopen(self.config_file, filename=self.file_name).read()#blocking, we have to wait for file
         except:
             pass#no a url
 
