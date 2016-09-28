@@ -1,8 +1,37 @@
 #responsible for storage of all config and connections to config clients
+import os
 import sys
+import json
+import urllib2
 import asyncio
 import asyncio.streams
+from aiohttp import web
 
+class ConfigHostAdmin:
+
+    def __init__(self, config_host):
+        self.admin_http_host = ''
+        self.admin_http_port = ''
+        self.config_host = config_host
+
+    def get_aiohttp_application(self):
+        def handle_client_info(request):
+            name = request.match_info.get('name')
+            name_dict = {i['service_name']:i for i in self.config_host.CLIENT_CONNECTIONS}
+            if name in name_dict:
+                return web.Response(text=str(name_dict[name]))#placeholder
+
+
+        app = web.Application()
+        app.router.add_get('/service/{name}/', handle_client_info)
+
+    def start(self):
+        self.app = self.get_aiohttp_application()
+        web.run_app(self.app, host=self.admin_http_host, port=self.admin_http_port)
+
+
+def config_admin_factory(c_h):
+    return ConfigHostAdmin(c_h)
 
 class BaseConfigServer:#over-ride usecase, creating a centralized config server on a domain using nginx etc.
 
@@ -51,14 +80,54 @@ class BaseConfigServer:#over-ride usecase, creating a centralized config server 
             loop.run_until_complete(self.server.wait_closed())
             self.server = None
 
+
 class ConfigHost(BaseConfigServer):
 
     def __init__(self, host, port):
         self._host = host
         self._port = port
+        self.loop = asyncio.get_event_loop()
         self.CLIENT_CONNECTIONS = {}
+        self.admin = config_admin_factory(self)
 
     await def config_handler(self, data, client_reader, client_writer):
-        #todo
-        self.CLIENT_CONNECTIONS['service_name'] = (client_reader, client_writer)
+        data = json.loads(data)
+        client_dict = {}
+        client_dict['raw_config'] = data
+        client_dict['reader'] = client_reader
+        client_dict['writer'] = client_writer
+        self.CLIENT_CONNECTIONS[data['FILE_PATH']] = client_dict
+
+    def get_file_content(self, c_file, c_file_name=''):
+        try:
+            if not c_file_name:
+                c_file_name = os.path.basename(c_file)
+            return urllib2.urlopen(c_file, filename=c_file_name).read()#blocking, we have to wait for file
+        except:
+            pass#no a url
+
+        if os.path.exists(c_file):
+            with open(c_file, 'rb') as file:
+                data = file.read()
+                self.data = json.loads(data)
+                return data
+        else:
+            raise Exception('Invalid file details!!')
+
+    async def update_client(self, service_name):
+        name_dict = {i['service_name']:i for i in self.config_host.CLIENT_CONNECTIONS}
+        new_data = self.get_file_content(name_dict[service_name]['FILE_PATH'])
+        self.CLIENT_CONNECTIONS[name_dict[service_name]['FILE_PATH']]['raw_config'] = new_data
+        writer = self.CLIENT_CONNECTIONS[name_dict[service_name]['FILE_PATH']]['writer']
+        await writer.write(json.dumps(new_data))
+
+    def start_hosting(self):
+        self.start(self.loop, self._host, self._port)
+        self.admin.start()
+
+    def stop(self):
+        self.admin.stop()
+        self.stop()
+
+
 

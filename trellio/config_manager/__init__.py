@@ -1,1 +1,5 @@
-__author__ = 'niks6'
+#config_file
+default_config = {'SERVICE_NAME': '',
+                  'SERVICE_HOST': '',
+                  'FILE_PATH': ''
+                  }
