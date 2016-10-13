@@ -1,14 +1,13 @@
-#responsible for storage of all config and connections to config clients
-import os
-import sys
-import json
-import urllib2
+# responsible for storage of all config and connections to config clients
 import asyncio
 import asyncio.streams
+import json
+import os
+
 from aiohttp import web
 
-class ConfigHostAdmin:
 
+class ConfigHostAdmin:
     def __init__(self, config_host):
         self.admin_http_host = ''
         self.admin_http_port = ''
@@ -17,10 +16,9 @@ class ConfigHostAdmin:
     def get_aiohttp_application(self):
         def handle_client_info(request):
             name = request.match_info.get('name')
-            name_dict = {i['service_name']:i for i in self.config_host.CLIENT_CONNECTIONS}
+            name_dict = {i['service_name']: i for i in self.config_host.CLIENT_CONNECTIONS}
             if name in name_dict:
-                return web.Response(text=str(name_dict[name]))#placeholder
-
+                return web.Response(text=str(name_dict[name]))  # placeholder
 
         app = web.Application()
         app.router.add_get('/service/{name}/', handle_client_info)
@@ -33,7 +31,8 @@ class ConfigHostAdmin:
 def config_admin_factory(c_h):
     return ConfigHostAdmin(c_h)
 
-class BaseConfigServer:#over-ride usecase, creating a centralized config server on a domain using nginx etc.
+
+class BaseConfigServer:  # over-ride usecase, creating a centralized config server on a domain using nginx etc.
 
     def __init__(self):
         self.clients = {}
@@ -51,7 +50,6 @@ class BaseConfigServer:#over-ride usecase, creating a centralized config server 
             del self.clients[task]
 
         task.add_done_callback(client_done)
-
 
     async def _handle_client(self, client_reader, client_writer):
         data = await client_reader.readline().decode("utf-8")
@@ -82,15 +80,15 @@ class BaseConfigServer:#over-ride usecase, creating a centralized config server 
 
 
 class ConfigHost(BaseConfigServer):
-
     def __init__(self, host, port):
+        super(ConfigHost).__init__()
         self._host = host
         self._port = port
         self.loop = asyncio.get_event_loop()
         self.CLIENT_CONNECTIONS = {}
         self.admin = config_admin_factory(self)
 
-    await def config_handler(self, data, client_reader, client_writer):
+    def config_handler(self, data, client_reader, client_writer):
         data = json.loads(data)
         client_dict = {}
         client_dict['raw_config'] = data
@@ -99,12 +97,12 @@ class ConfigHost(BaseConfigServer):
         self.CLIENT_CONNECTIONS[data['FILE_PATH']] = client_dict
 
     def get_file_content(self, c_file, c_file_name=''):
-        try:
-            if not c_file_name:
-                c_file_name = os.path.basename(c_file)
-            return urllib2.urlopen(c_file, filename=c_file_name).read()#blocking, we have to wait for file
-        except:
-            pass#no a url
+        # try: #todo use requests lib instead of urllib2
+        #     if not c_file_name:
+        #         c_file_name = os.path.basename(c_file)
+        #     return urllib2.urlopen(c_file, filename=c_file_name).read()  # blocking, we have to wait for file
+        # except:
+        #     pass  # no a url
 
         if os.path.exists(c_file):
             with open(c_file, 'rb') as file:
@@ -115,7 +113,8 @@ class ConfigHost(BaseConfigServer):
             raise Exception('Invalid file details!!')
 
     async def update_client(self, service_name):
-        name_dict = {i['service_name']:i for i in self.config_host.CLIENT_CONNECTIONS}
+        name_dict = {i['service_name']: i for i in
+                     self.config_host.CLIENT_CONNECTIONS}  # todo self.config_host is undefined
         new_data = self.get_file_content(name_dict[service_name]['FILE_PATH'])
         self.CLIENT_CONNECTIONS[name_dict[service_name]['FILE_PATH']]['raw_config'] = new_data
         writer = self.CLIENT_CONNECTIONS[name_dict[service_name]['FILE_PATH']]['writer']
@@ -125,9 +124,6 @@ class ConfigHost(BaseConfigServer):
         self.start(self.loop, self._host, self._port)
         self.admin.start()
 
-    def stop(self):
+    def stop(self):  # todo fix this method ??
         self.admin.stop()
         self.stop()
-
-
-
