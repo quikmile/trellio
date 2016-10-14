@@ -11,6 +11,7 @@ class ConfigClient:#assign it, at the end of class
         self.host_ip = host_ip
         self.host_port = host_port
         self.config_file = file_path
+        self.file_name = file_name
         self._loop = asyncio.get_event_loop()
         self.service = service
 
@@ -42,6 +43,7 @@ class ConfigClient:#assign it, at the end of class
                                                                       self.host_port)
         self.config_host_reader = client_reader
         self.config_host_writer = client_writer
+        client_writer.write()
 
     def _upload_config(self, json_string):
         self.config_host_writer(json_string)
