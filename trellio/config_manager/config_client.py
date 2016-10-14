@@ -1,17 +1,16 @@
 import asyncio
-import urllib2
 import os
 import json
 from concurrent.futures import ProcessPoolExecutor
 from trellio.host import Host
+from urllib.request import urlopen
 
-class ConfigClient:#assign it at the end of class
+class ConfigClient:#assign it, at the end of class
 
     def __init__(self, host_ip, host_port, file_path, file_name, service):
         self.host_ip = host_ip
         self.host_port = host_port
         self.config_file = file_path
-        self.file_name = file_name
         self._loop = asyncio.get_event_loop()
         self.service = service
 
@@ -24,17 +23,18 @@ class ConfigClient:#assign it at the end of class
 
     def get_file_content(self):
         try:
-            return urllib2.urlopen(self.config_file, filename=self.file_name).read()#blocking, we have to wait for file
+            #remote file
+            data = urlopen(self.config_file).read()#blocking, we have to wait for file
+            return json.loads(data)
         except:
-            pass#no a url
-
-        if os.path.exists(self.config_file):
-            with open(self.file_name, 'rb') as file:
-                data = file.read()
-                self.data = json.loads(data)
-                return data
-        else:
-            raise Exception('Invalid file details!!')
+            #local file
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'rb') as file:
+                    data = file.read()
+                    self.data = json.loads(data)
+                    return data
+            else:
+                raise Exception('Invalid file details!!')
 
 
     def _connect_to_config_host(self):
@@ -42,7 +42,6 @@ class ConfigClient:#assign it at the end of class
                                                                       self.host_port)
         self.config_host_reader = client_reader
         self.config_host_writer = client_writer
-        client_writer.write()
 
     def _upload_config(self, json_string):
         self.config_host_writer(json_string)
@@ -52,12 +51,14 @@ class ConfigClient:#assign it at the end of class
         def _poll(reader):
             while True:
                 data = yield from reader.read()
-                self.data = json.loads(data)#keep updating it
-                self._stop()
-                self._run()
-                #How to re-run?
-
-        infinite_future = self._loop.run_in_executor(ProcessPoolExecutor(max_workers=1), _poll, self.config_host_reader)
+                if data:
+                    self.data = json.loads(data)#keep updating it
+                    self._stop()
+                    self._run()
+        self.export()#blocking
+        infinite_future = self._loop.run_in_executor(ProcessPoolExecutor(max_workers=1),
+                                                     _poll,
+                                                     self.config_host_reader)
         self._run()
 
     def _run(self):#incomplete

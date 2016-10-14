@@ -2,16 +2,16 @@
 import os
 import sys
 import json
-import urllib2
 import asyncio
 import asyncio.streams
 from aiohttp import web
+from urllib.request import urlopen
 
 class ConfigHostAdmin:
 
     def __init__(self, config_host):
-        self.admin_http_host = ''
-        self.admin_http_port = ''
+        self.admin_http_host = ''#host addr at which confighost web api will be served
+        self.admin_http_port = ''#port
         self.config_host = config_host
 
     def get_aiohttp_application(self):
@@ -24,19 +24,26 @@ class ConfigHostAdmin:
 
         app = web.Application()
         app.router.add_get('/service/{name}/', handle_client_info)
+        return app
 
     def start(self):
         self.app = self.get_aiohttp_application()
         web.run_app(self.app, host=self.admin_http_host, port=self.admin_http_port)
 
 
+    def stop(self):
+        pass
+
 def config_admin_factory(c_h):
     return ConfigHostAdmin(c_h)
 
 class BaseConfigServer:#over-ride usecase, creating a centralized config server on a domain using nginx etc.
+    '''
+    this class does'nt have logic for config management
+    '''
 
     def __init__(self):
-        self.clients = {}
+        self.__clients = {}
 
     def _accept_client(self, client_reader, client_writer):
         """
@@ -44,11 +51,11 @@ class BaseConfigServer:#over-ride usecase, creating a centralized config server 
         """
         # start a new Task to handle this specific client connection
         task = asyncio.Task(self._handle_client(client_reader, client_writer))
-        self.clients[task] = (client_reader, client_writer)
+        self.__clients[task] = (client_reader, client_writer)#temporary dictionary until validation is done
 
         def client_done(task):
             self.client_handler_exit()
-            del self.clients[task]
+            del self.__clients[task]
 
         task.add_done_callback(client_done)
 
@@ -59,7 +66,7 @@ class BaseConfigServer:#over-ride usecase, creating a centralized config server 
         # This enables us to have flow control in our connection.
         await client_writer.drain()
 
-    def config_handler(self, data, client_reader, client_writer):
+    def config_handler(self, data, client_reader, client_writer):#method where everything is done
         raise NotImplementedError
 
     def client_exit(self):
@@ -89,45 +96,51 @@ class ConfigHost(BaseConfigServer):
         self.loop = asyncio.get_event_loop()
         self.CLIENT_CONNECTIONS = {}
         self.admin = config_admin_factory(self)
+        super().___init__()
 
-    await def config_handler(self, data, client_reader, client_writer):
+    async def config_handler(self, data, client_reader, client_writer):#main method
         data = json.loads(data)
         client_dict = {}
         client_dict['raw_config'] = data
         client_dict['reader'] = client_reader
         client_dict['writer'] = client_writer
-        self.CLIENT_CONNECTIONS[data['FILE_PATH']] = client_dict
+        self.CLIENT_CONNECTIONS[data['SERVICE_NAME']] = client_dict#service name will be unique
+        await self.update_client(data['SERVICE_NAME'])#start the service now
 
-    def get_file_content(self, c_file, c_file_name=''):
+    def get_file_content(self, c_file):
         try:
-            if not c_file_name:
-                c_file_name = os.path.basename(c_file)
-            return urllib2.urlopen(c_file, filename=c_file_name).read()#blocking, we have to wait for file
+            #remote file
+            data = urlopen(c_file).read()#blocking, we have to wait for file
+            return json.loads(data)
         except:
-            pass#no a url
+            #local file
+            if os.path.exists(c_file):
+                with open(c_file, 'rb') as file:
+                    data = file.read()
+                    self.data = json.loads(data)
+                    return data
+            else:
+                raise Exception('Invalid file details!!')
 
-        if os.path.exists(c_file):
-            with open(c_file, 'rb') as file:
-                data = file.read()
-                self.data = json.loads(data)
-                return data
-        else:
-            raise Exception('Invalid file details!!')
-
-    async def update_client(self, service_name):
-        name_dict = {i['service_name']:i for i in self.config_host.CLIENT_CONNECTIONS}
-        new_data = self.get_file_content(name_dict[service_name]['FILE_PATH'])
-        self.CLIENT_CONNECTIONS[name_dict[service_name]['FILE_PATH']]['raw_config'] = new_data
-        writer = self.CLIENT_CONNECTIONS[name_dict[service_name]['FILE_PATH']]['writer']
+    async def update_client(self, service_name):#will be called by web api, cli command etc.,
+                                                # when file is changed successfully
+        new_data = self.get_file_content(self.CLIENT_CONNECTIONS[service_name]['FILE_PATH'])
+        n_service_name = new_data['SERVICE_NAME']
+        self.CLIENT_CONNECTIONS[n_service_name]['raw_config'] = new_data
+        writer = self.CLIENT_CONNECTIONS[n_service_name]['writer']
         await writer.write(json.dumps(new_data))
+        if service_name != n_service_name:
+            del self.CLIENT_CONNECTIONS[service_name]
 
-    def start_hosting(self):
+    def start_config(self):
         self.start(self.loop, self._host, self._port)
-        self.admin.start()
+        if self.admin:
+            self.admin.start()
 
-    def stop(self):
-        self.admin.stop()
-        self.stop()
+    def stop_config(self):
+        if self.admin:
+            self.admin.stop()
+        self.stop(asyncio.get_event_loop())
 
 
 
