@@ -13,7 +13,6 @@ from trellio.services import HTTPService, TCPService
 from .protocol_factory import get_trellio_protocol
 from .utils.log import setup_logging
 from trellio.utils.decorators import deprecated
-from trellio.utils.stats import Stats, Aggregator
 
 
 class Host:
@@ -37,6 +36,8 @@ class Host:
     _tcp_service = None
     _http_service = None
     _logger = logging.getLogger(__name__)
+    _lock = asyncio.Lock()
+    _locked_bucket = None
 
     @classmethod
     def configure(cls, name, registry_host: str = "0.0.0.0", registry_port: int = 4500,
@@ -165,6 +166,8 @@ class Host:
     def _start_server(cls):
         tcp_server = cls._create_tcp_server()
         http_server = cls._create_http_server()
+        with (yield from cls._lock):
+            cls._locked_bucket = [tcp_server, http_server]
         if not cls.ronin:
             if cls._tcp_service:
                 asyncio.get_event_loop().run_until_complete(cls._tcp_service.tcp_bus.connect())
@@ -226,10 +229,7 @@ class Host:
         service.pubsub_bus = pubsub_bus
 
     @classmethod
-    def _setup_logging(cls):
+    def _setup_logging(cls):#removed stats and aggregation
         host = cls._tcp_service if cls._tcp_service else cls._http_service
         identifier = '{}_{}'.format(host.name, host.socket_address[1])
         setup_logging(identifier)
-        Stats.service_name = host.name
-        Stats.periodic_stats_logger()
-        Aggregator.periodic_aggregated_stats_logger()

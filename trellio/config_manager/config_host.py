@@ -61,7 +61,7 @@ class BaseConfigServer:#over-ride usecase, creating a centralized config server 
 
 
     async def _handle_client(self, client_reader, client_writer):
-        data = await client_reader.readline().decode("utf-8")
+        data = await client_reader.read().decode("utf-8")
         await self.config_handler(data, client_reader, client_writer)
         # This enables us to have flow control in our connection.
         await client_writer.drain()
@@ -99,13 +99,19 @@ class ConfigHost(BaseConfigServer):
         super().___init__()
 
     async def config_handler(self, data, client_reader, client_writer):#main method
-        data = json.loads(data)
+        file_path = json.loads(data)
+        data = self.get_file_content(file_path['FILE_PATH'])
         client_dict = {}
         client_dict['raw_config'] = data
         client_dict['reader'] = client_reader
         client_dict['writer'] = client_writer
-        self.CLIENT_CONNECTIONS[data['SERVICE_NAME']] = client_dict#service name will be unique
-        await self.update_client(data['SERVICE_NAME'])#start the service now
+        self.CLIENT_CONNECTIONS[data['UNIQUE_SERVICE_NAME']] = client_dict#service name will be unique
+        await self.start_client(data['UNIQUE_SERVICE_NAME'])#start the service now
+
+    async def start_client(self, service_name):
+        c_d = self.CLIENT_CONNECTIONS[service_name]
+        c_d['writer'].write(':start_client')
+        await c_d['writer'].drain()
 
     def get_file_content(self, c_file):
         try:
@@ -122,13 +128,11 @@ class ConfigHost(BaseConfigServer):
             else:
                 raise Exception('Invalid file details!!')
 
-    async def update_client(self, service_name):#will be called by web api, cli command etc.,
+    async def update_client_file(self, service_name):#will be called by web api, cli command etc.,
                                                 # when file is changed successfully
         new_data = self.get_file_content(self.CLIENT_CONNECTIONS[service_name]['FILE_PATH'])
-        n_service_name = new_data['SERVICE_NAME']
+        n_service_name = new_data['UNIQUE_SERVICE_NAME']
         self.CLIENT_CONNECTIONS[n_service_name]['raw_config'] = new_data
-        writer = self.CLIENT_CONNECTIONS[n_service_name]['writer']
-        await writer.write(json.dumps(new_data))
         if service_name != n_service_name:
             del self.CLIENT_CONNECTIONS[service_name]
 
