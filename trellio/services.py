@@ -9,7 +9,7 @@ from functools import wraps, partial
 from again.utils import unique_hex
 from aiohttp.web import Response
 
-from .exceptions import RequestException, ClientException
+from .exceptions import RequestException, ClientException, TrellioServiceException
 from .packet import MessagePacket
 from .utils.ordered_class_member import OrderedClassMembers
 from .utils.stats import Aggregator, Stats
@@ -153,7 +153,7 @@ def _get_api_decorator(func=None, old_api=None, replacement_api=None, timeout=AP
             failed = True
             _logger.exception("TCP request had a timeout for method %s", func.__name__)
 
-        except VykedServiceException as e:
+        except TrellioServiceException as e:
             Stats.tcp_stats['total_responses'] += 1
             error = str(e)
             status = 'handled_error'
@@ -245,7 +245,7 @@ def get_decorated_fun(method, path, required_params, timeout):
                     _logger.exception("HTTP request had a timeout for method %s", func.__name__)
                     return Response(status=408, body='Request Timeout'.encode())
 
-                except VykedServiceException as e:
+                except TrellioServiceException as e:
                     Stats.http_stats['total_responses'] += 1
                     status = 'handled_exception'
                     _logger.exception('Handled exception %s for method %s ', e.__class__.__name__, func.__name__)
