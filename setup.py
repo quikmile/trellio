@@ -11,6 +11,6 @@ setup(
     author_email='ashuverma1989@gmail.com',
     url='https://github.com/technomaniac/trellio',
     keywords=['asyncio', 'microservice', 'microframework', 'aiohttp'],
-    install_requires=['again', 'async-retrial', 'async-redis', 'aiohttp', 'cchardet', 'multidict', 'python-json-logger',
+    install_requires=['again', 'async-retrial', 'asyncio-redis', 'aiohttp', 'cchardet', 'multidict', 'python-json-logger',
                       'setproctitle==1.1.9', 'PyYAML', 'uvloop', 'async-timeout', 'jsonstreamer', 'yarl']
 )

@@ -1,3 +1,5 @@
+__version__ = '1.0.31'
+
 __all__ = ['Host', 'TCPServiceClient', 'TCPService', 'HTTPService', 'HTTPServiceClient', 'api', 'request', 'subscribe',
            'publish', 'xsubscribe', 'get', 'post', 'head', 'put', 'patch', 'delete', 'options', 'trace',
            'Registry', 'RequestException', 'Response', 'Request', 'log', 'setup_logging',
@@ -18,5 +20,3 @@ from .services import (get, post, head, put, patch, delete, options, trace)  # n
 from .utils import log  # noqa
 from .utils.log import setup_logging  # noqa
 from .wrappers import Response, Request  # noqa
-
-__version__ = '1.0.4'
