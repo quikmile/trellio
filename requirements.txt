@@ -1,11 +1,13 @@
 again==1.2.21
-aiohttp==0.22.5
+aiohttp==1.1.4
 async-retrial==0.7
+async-timeout==1.1.0
 asyncio-redis==0.14.2
 chardet==2.3.0
 jsonstreamer==1.3.6
-multidict==2.0.1
-pkg-resources
+multidict==2.1.2
 python-json-logger==0.1.5
 PyYAML==3.12
-setproctitle==1.1.9
+setproctitle==1.1.10
+uvloop==0.6.5
+yarl==0.7.0

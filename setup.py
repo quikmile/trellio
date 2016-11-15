@@ -1,13 +1,16 @@
 from setuptools import setup, find_packages
 
+from trellio import __version__
+
 setup(
     name='trellio',
     packages=find_packages(),
-    version='1.0.1',
-    description='Python 3.5 Asyncio based microframework for microservice architecture',
+    version=__version__,
+    description='Python 3 Asyncio based microframework for microservice architecture',
     author='Abhishek Verma',
     author_email='ashuverma1989@gmail.com',
     url='https://github.com/technomaniac/trellio',
     keywords=['asyncio', 'microservice', 'microframework', 'aiohttp'],
-    install_requires=['aiohttp', 'cchardet', 'multidict', 'python-json-logger', 'setproctitle==1.1.9', 'PyYAML']
+    install_requires=['again', 'async-retrial', 'async-redis', 'aiohttp', 'cchardet', 'multidict', 'python-json-logger',
+                      'setproctitle==1.1.9', 'PyYAML', 'uvloop', 'async-timeout', 'jsonstreamer', 'yarl']
 )
