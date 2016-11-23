@@ -112,7 +112,7 @@ class TCPBus:
     def send(self, packet: dict):
         packet['from'] = self._host_id
         func = getattr(self, '_' + packet['type'] + '_sender')
-        asyncio.async(func(packet))
+        asyncio.ensure_future(func(packet))
 
     @retry(should_retry_for_result=lambda x: not x, should_retry_for_exception=lambda x: True, timeout=None,
            max_attempts=5, multiplier=2)
