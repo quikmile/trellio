@@ -1,10 +1,10 @@
 import asyncio
+import functools
+import logging
 
 from aiohttp import request
 
 from .packet import ControlPacket
-import logging
-import functools
 
 PING_TIMEOUT = 10
 PING_INTERVAL = 5

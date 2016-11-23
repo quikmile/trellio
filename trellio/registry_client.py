@@ -87,7 +87,7 @@ class RegistryClient:
         return self._transport, self._protocol
 
     def on_timeout(self, host, port, node_id):
-        asyncio.async(self.connect())
+        asyncio.ensure_future(self.connect())
 
     def receive(self, packet: dict, protocol, transport):
         if packet['type'] == 'registered':

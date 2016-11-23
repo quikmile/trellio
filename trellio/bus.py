@@ -1,21 +1,21 @@
 import asyncio
-from collections import defaultdict
-from functools import partial
 import json
 import logging
 import random
 import uuid
+from collections import defaultdict
+from functools import partial
 
-from again.utils import unique_hex
 import aiohttp
+from again.utils import unique_hex
 from retrial.retrial import retry
 
-from .services import TCPServiceClient, HTTPServiceClient
-from .pubsub import PubSub
+from .exceptions import ClientNotFoundError, ClientDisconnected
 from .packet import ControlPacket, MessagePacket
 from .protocol_factory import get_trellio_protocol
+from .pubsub import PubSub
+from .services import TCPServiceClient, HTTPServiceClient
 from .utils.jsonencoder import TrellioEncoder
-from .exceptions import ClientNotFoundError, ClientDisconnected
 
 HTTP = 'http'
 TCP = 'tcp'
@@ -154,7 +154,7 @@ class TCPBus:
         #     self._pingers[node_id] = pinger
         #     pinger.register_tcp_service(protocol, node_id)
         #     asyncio.async(pinger.start_ping())
-        self._client_protocols[node_id] = protocol#stores connection(sockets)
+        self._client_protocols[node_id] = protocol  # stores connection(sockets)
 
     @staticmethod
     def _create_json_service_name(app, service, version):

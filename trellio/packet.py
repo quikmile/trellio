@@ -35,7 +35,6 @@ class _Packet:
 
 
 class ControlPacket(_Packet):
-
     @classmethod
     def registration(cls, ip: str, port: int, node_id, name: str, version: str, dependencies, service_type: str):
         v = [{'name': dependency.name, 'version': dependency.version} for dependency in dependencies]
@@ -150,7 +149,6 @@ class ControlPacket(_Packet):
 
 
 class MessagePacket(_Packet):
-
     @classmethod
     def request(cls, name, version, app_name, packet_type, endpoint, params, entity):
         return {'pid': cls._next_pid(),

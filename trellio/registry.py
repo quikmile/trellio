@@ -9,9 +9,9 @@ from functools import partial
 
 from again.utils import natural_sort
 
-from .protocol_factory import get_trellio_protocol
 from .packet import ControlPacket
 from .pinger import TCPPinger
+from .protocol_factory import get_trellio_protocol
 from .utils.log import setup_logging
 
 Service = namedtuple('Service', ['name', 'version', 'dependencies', 'host', 'port', 'node_id', 'type'])

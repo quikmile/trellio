@@ -1,18 +1,18 @@
 import asyncio
 import logging
-from functools import partial
-import signal
 import os
+import signal
 import warnings
+from functools import partial
 
 from aiohttp.web import Application
 
-from .bus import TCPBus, PubSubBus
 from trellio.registry_client import RegistryClient
 from trellio.services import HTTPService, TCPService
+from trellio.utils.decorators import deprecated
+from .bus import TCPBus, PubSubBus
 from .protocol_factory import get_trellio_protocol
 from .utils.log import setup_logging
-from trellio.utils.decorators import deprecated
 
 
 class Host:
@@ -229,7 +229,7 @@ class Host:
         service.pubsub_bus = pubsub_bus
 
     @classmethod
-    def _setup_logging(cls):#removed stats and aggregation
+    def _setup_logging(cls):  # removed stats and aggregation
         host = cls._tcp_service if cls._tcp_service else cls._http_service
         identifier = '{}_{}'.format(host.name, host.socket_address[1])
         setup_logging(identifier)

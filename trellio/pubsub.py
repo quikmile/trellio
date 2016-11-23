@@ -1,5 +1,5 @@
-import logging
 import asyncio
+import logging
 
 import asyncio_redis as redis
 
