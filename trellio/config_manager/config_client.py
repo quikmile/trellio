@@ -28,7 +28,7 @@ class ConfigClient:#assign it, at the end of class
     def export_to_host(self):
         yield self._connect_to_config_host()#creates connection to config host
         d = {'FILE_PATH': self.config_file}
-        self._upload(json.dumps(d))#verification and storage
+        self._upload(json.dumps(d))#upload the file path to config host
 
 
     def get_file_content(self):

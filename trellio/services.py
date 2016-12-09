@@ -206,9 +206,36 @@ def make_request(func, self, args, kwargs, method):
     return response
 
 
+def _enable_http_middleware(func):#pre and post http, processing
+    @wraps(func)
+    def f(self, *args, **kwargs):
+        x = getattr(self, 'http_middlewares')
+        if x:
+            for i in x:
+                pre_request = getattr(i, 'pre_request')
+                if callable(pre_request):
+                    try:
+                        pre_request(*args, *kwargs)
+                    except Exception as e:
+                        return Response(status=400, content_type='application/json',
+                                        body=json.dumps({'error': e.msg, 'sector': getattr(i, 'middleware_info')}).encode())
+        result = func(self, *args, **kwargs)
+        if x:
+            for i in x:
+                post_request = getattr(i, 'post_request')
+                if callable(post_request):
+                    try:
+                        post_request(*args, *kwargs, result)
+                    except Exception as e:
+                        return Response(status=400, content_type='application/json',
+                             body=json.dumps({'error': e.msg, 'sector': getattr(i, 'middleware_info')}).encode())
+        return result
+    return f
+
 def get_decorated_fun(method, path, required_params, timeout):
     def decorator(func):
         @wraps(func)
+        @_enable_http_middleware
         def f(self, *args, **kwargs):
             if isinstance(self, HTTPServiceClient):
                 return (yield from make_request(func, self, args, kwargs, method))
