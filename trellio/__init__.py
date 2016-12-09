@@ -1,15 +1,7 @@
-__version__ = '1.0.31'
-
 __all__ = ['Host', 'TCPServiceClient', 'TCPService', 'HTTPService', 'HTTPServiceClient', 'api', 'request', 'subscribe',
            'publish', 'xsubscribe', 'get', 'post', 'head', 'put', 'patch', 'delete', 'options', 'trace',
            'Registry', 'RequestException', 'Response', 'Request', 'log', 'setup_logging',
-           'apideprecated', 'TrellioServiceException', 'TrellioServiceError', '__version__']
-
-import asyncio
-
-import uvloop
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+           'apideprecated', 'TrellioServiceException', 'TrellioServiceError']
 
 from .exceptions import RequestException, TrellioServiceError, TrellioServiceException  # noqa
 from .host import Host  # noqa
@@ -20,3 +12,5 @@ from .services import (get, post, head, put, patch, delete, options, trace)  # n
 from .utils import log  # noqa
 from .utils.log import setup_logging  # noqa
 from .wrappers import Response, Request  # noqa
+
+__version__ = '1.0.00'
