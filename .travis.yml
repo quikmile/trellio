@@ -13,7 +13,6 @@ before_install:
     - cd ..
 
 install: "pip install -r requirements.txt"
-install: "pip install -r requirements/test.txt"
 script:
     - py.test --ignore tests/integration
     - py.test tests/integration
