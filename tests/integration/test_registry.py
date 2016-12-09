@@ -41,9 +41,9 @@ class ServiceB(HTTPService):
         super().__init__("ServiceB", 1, host, port)
 
     @get(path="/{data}")
-    def get_echo(self, request):
+    async def get_echo(self, request):
         data = request.match_info.get('data')
-        d = yield from self._client_a.echo(data)
+        d = await self._client_a.echo(data)
         return Response(status=200, body=d.encode())
 
 
