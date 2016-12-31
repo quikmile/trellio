@@ -209,27 +209,29 @@ def make_request(func, self, args, kwargs, method):
 def _enable_http_middleware(func):  # pre and post http, processing
     @wraps(func)
     def f(self, *args, **kwargs):
+        if hasattr(self, 'http_middlewares'):
+            for i in self.http_middlewares:
+                if hasattr(i, 'pre_request'):
+                    pre_request = getattr(i, 'pre_request')
+                    if callable(pre_request):
+                        try:
+                            pre_request(*args, **kwargs)
+                        except Exception as e:
+                            return Response(status=400, content_type='application/json',
+                                                body=json.dumps(
+                                                    {'error': str(e), 'sector': getattr(i, 'middleware_info')}).encode())
         result = func(self, *args, **kwargs)
         if hasattr(self, 'http_middlewares'):
             for i in self.http_middlewares:
-                pre_request = getattr(i, 'pre_request')
-                if callable(pre_request):
-                    try:
-                        pre_request(*args, *kwargs)
-                    except Exception as e:
-                        return Response(status=400, content_type='application/json',
-                                        body=json.dumps(
-                                            {'error': e.msg, 'sector': getattr(i, 'middleware_info')}).encode())
-
-            for i in self.http_middlewares:
-                post_request = getattr(i, 'post_request')
-                if callable(post_request):
-                    try:
-                        post_request(*args, *kwargs, result)
-                    except Exception as e:
-                        return Response(status=400, content_type='application/json',
-                                        body=json.dumps(
-                                            {'error': e.msg, 'sector': getattr(i, 'middleware_info')}).encode())
+                if hasattr(i, 'post_request'):
+                    post_request = getattr(i, 'post_request')
+                    if callable(post_request):
+                        try:
+                            post_request(result, *args, **kwargs)
+                        except Exception as e:
+                            return Response(status=400, content_type='application/json',
+                                            body=json.dumps(
+                                            {'error': str(e), 'sector': getattr(i, 'middleware_info')}).encode())
 
         return result
 
