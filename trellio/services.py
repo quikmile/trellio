@@ -215,7 +215,7 @@ def _enable_http_middleware(func):  # pre and post http, processing
                     pre_request = getattr(i, 'pre_request')
                     if callable(pre_request):
                         try:
-                            pre_request(*args, **kwargs)
+                            pre_request(self, *args, **kwargs)#passing service as first argument
                         except Exception as e:
                             return Response(status=400, content_type='application/json',
                                                 body=json.dumps(
@@ -227,7 +227,7 @@ def _enable_http_middleware(func):  # pre and post http, processing
                     post_request = getattr(i, 'post_request')
                     if callable(post_request):
                         try:
-                            post_request(result, *args, **kwargs)
+                            post_request(self, result, *args, **kwargs)
                         except Exception as e:
                             return Response(status=400, content_type='application/json',
                                             body=json.dumps(
