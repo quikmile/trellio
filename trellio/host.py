@@ -40,7 +40,7 @@ class Host:
 
     @classmethod
     def configure(cls, name, registry_host: str = "0.0.0.0", registry_port: int = 4500,
-                  pubsub_host: str = "0.0.0.0", pubsub_port: int = 6379):
+                  pubsub_host: str = "0.0.0.0", pubsub_port: int = 6379, post_init=None):
         """ A convenience method for providing registry and pubsub(redis) endpoints
 
         :param name: Used for process name
@@ -55,6 +55,7 @@ class Host:
         Host.registry_port = registry_port
         Host.pubsub_host = pubsub_host
         Host.pubsub_port = pubsub_port
+        Host.post_init = post_init
 
     @classmethod
     @deprecated
@@ -104,6 +105,7 @@ class Host:
             cls._set_process_name()
             cls._set_signal_handlers()
             cls._start_server()
+            cls.post_init()
         else:
             cls._logger.error('No services to host')
 
