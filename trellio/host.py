@@ -233,5 +233,4 @@ class Host:
         identifier = '{}_{}'.format(host.name, host.socket_address[1])
         setup_logging(identifier)
         Stats.service_name = host.name
-        Stats.periodic_stats_logger()
         Aggregator.periodic_aggregated_stats_logger()
