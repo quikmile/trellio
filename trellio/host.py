@@ -14,6 +14,7 @@ from trellio.utils.stats import Stats, Aggregator
 from .bus import TCPBus, PubSubBus
 from .protocol_factory import get_trellio_protocol
 from .utils.log import setup_logging
+from .signals import ServiceReady
 
 
 class Host:
@@ -40,7 +41,7 @@ class Host:
 
     @classmethod
     def configure(cls, name, registry_host: str = "0.0.0.0", registry_port: int = 4500,
-                  pubsub_host: str = "0.0.0.0", pubsub_port: int = 6379, post_init=None):
+                  pubsub_host: str = "0.0.0.0", pubsub_port: int = 6379):
         """ A convenience method for providing registry and pubsub(redis) endpoints
 
         :param name: Used for process name
@@ -55,7 +56,20 @@ class Host:
         Host.registry_port = registry_port
         Host.pubsub_host = pubsub_host
         Host.pubsub_port = pubsub_port
-        Host.post_init = post_init
+
+    @classmethod
+    def get_http_service(cls):
+        return cls._http_service
+
+    @classmethod
+    def get_tcp_service(cls):
+        return cls._tcp_service
+
+    @classmethod
+    def get_tcp_clients(cls):
+        tcp_service = cls.get_tcp_service()
+        if tcp_service:
+            return tcp_service.clients
 
     @classmethod
     @deprecated
@@ -94,6 +108,10 @@ class Host:
             cls._set_bus(tcp_service)
         else:
             warnings.warn('TCP service is already attached')
+
+    @classmethod
+    def post_init(cls):
+        ServiceReady._run(cls)
 
     @classmethod
     def run(cls):
@@ -233,5 +251,4 @@ class Host:
         identifier = '{}_{}'.format(host.name, host.socket_address[1])
         setup_logging(identifier)
         Stats.service_name = host.name
-        Stats.periodic_stats_logger()
         Aggregator.periodic_aggregated_stats_logger()

@@ -178,7 +178,6 @@ def _get_api_decorator(func=None, old_api=None, replacement_api=None, timeout=AP
             'time_taken': end_time - start_time,
             'hostname': hostname, 'service_name': service_name
         }
-        logging.getLogger('stats').debug(logd)
         _logger.debug('Time taken for %s is %d milliseconds', func.__name__, end_time - start_time)
 
         # call to update aggregator, designed to replace the stats module.
@@ -317,6 +316,7 @@ def get_decorated_fun(method, path, required_params, timeout):
         f.paths = path
         if not isinstance(path, list):
             f.paths = [path]
+        
         return f
 
     return decorator
