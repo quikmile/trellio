@@ -14,7 +14,7 @@ from trellio.utils.stats import Stats, Aggregator
 from .bus import TCPBus, PubSubBus
 from .protocol_factory import get_trellio_protocol
 from .utils.log import setup_logging
-from signals import ServiceReady
+from .signals import ServiceReady
 
 
 class Host:
