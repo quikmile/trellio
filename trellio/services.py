@@ -316,6 +316,7 @@ def get_decorated_fun(method, path, required_params, timeout):
         f.paths = path
         if not isinstance(path, list):
             f.paths = [path]
+        
         return f
 
     return decorator
