@@ -111,7 +111,7 @@ class Host:
 
     @classmethod
     def post_init(cls):
-        ServiceReady._run(cls)
+        asyncio.get_event_loop().run_until_complete(ServiceReady._run(cls))
 
     @classmethod
     def run(cls):
