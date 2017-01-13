@@ -214,11 +214,11 @@ def _enable_http_middleware(func):  # pre and post http, processing
                     pre_request = getattr(i, 'pre_request')
                     if callable(pre_request):
                         try:
-                            pre_request(self, *args, **kwargs)#passing service as first argument
+                            pre_request(self, *args, **kwargs)  # passing service as first argument
                         except Exception as e:
                             return Response(status=400, content_type='application/json',
-                                                body=json.dumps(
-                                                    {'error': str(e), 'sector': getattr(i, 'middleware_info')}).encode())
+                                            body=json.dumps(
+                                                {'error': str(e), 'sector': getattr(i, 'middleware_info')}).encode())
         result = func(self, *args, **kwargs)
         if hasattr(self, 'http_middlewares'):
             for i in self.http_middlewares:
@@ -230,7 +230,7 @@ def _enable_http_middleware(func):  # pre and post http, processing
                         except Exception as e:
                             return Response(status=400, content_type='application/json',
                                             body=json.dumps(
-                                            {'error': str(e), 'sector': getattr(i, 'middleware_info')}).encode())
+                                                {'error': str(e), 'sector': getattr(i, 'middleware_info')}).encode())
 
         return result
 
