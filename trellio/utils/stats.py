@@ -66,6 +66,7 @@ class StatUnit:
 
 class Aggregator:
     _stats = StatUnit(key='total')
+    _service_name = None
 
     @classmethod
     def recursive_update(cls, d, new_val, keys, success):
@@ -95,7 +96,7 @@ class Aggregator:
         return cls._stats.to_dict()
 
     @classmethod
-    def periodic_aggregated_stats_logger(cls, service):
+    def periodic_aggregated_stats_logger(cls):
         hostname = socket.gethostbyname(socket.gethostname())
 
         logd = cls._stats.to_dict()
@@ -110,7 +111,7 @@ class Aggregator:
                     'method': k,
                     'server_type': server_type,
                     'hostname': hostname,
-                    'service_name': service.name,
+                    'service_name': cls._service_name,
                     'average_response_time': v['average'],
                     'total_request_count': v['count'],
                     'success_count': v['success_count']
