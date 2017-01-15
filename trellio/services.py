@@ -135,7 +135,7 @@ def _get_api_decorator(func=None, old_api=None, replacement_api=None, timeout=AP
         error = None
         failed = False
 
-        status = 'succesful'
+        status = 'successful'
         success = True
         if not iscoroutine(func):
             wrapped_func = coroutine(func)

@@ -194,7 +194,7 @@ class Host:
             cls._logger.info('Serving TCP on {}'.format(tcp_server.sockets[0].getsockname()))
         if http_server:
             cls._logger.info('Serving HTTP on {}'.format(http_server.sockets[0].getsockname()))
-        cls._logger.info("Event loop running forever, press CTRL+c to interrupt.")
+        cls._logger.info("Event loop running forever, press CTRL+C to interrupt.")
         cls._logger.info("pid %s: send SIGINT or SIGTERM to exit." % os.getpid())
         try:
             asyncio.get_event_loop().run_forever()
@@ -247,8 +247,8 @@ class Host:
 
     @classmethod
     def _setup_logging(cls):
-        host = cls._tcp_service if cls._tcp_service else cls._http_service
-        identifier = '{}_{}'.format(host.name, host.socket_address[1])
+        service = cls._tcp_service if cls._tcp_service else cls._http_service
+        identifier = '{}_{}'.format(service.name, service.socket_address[1])
         setup_logging(identifier)
-        Stats.service_name = host.name
-        Aggregator.periodic_aggregated_stats_logger()
+        Stats.service_name = service.name
+        Aggregator.periodic_aggregated_stats_logger(service)

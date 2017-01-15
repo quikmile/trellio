@@ -6,6 +6,7 @@ import socket
 
 
 class Stats:
+    name = None
     hostname = socket.gethostbyname(socket.gethostname())
     service_name = '_'.join(setproctitle.getproctitle().split('_')[1:-1])
     http_stats = {'total_requests': 0, 'total_responses': 0, 'timedout': 0, 'total_errors': 0}
@@ -15,7 +16,7 @@ class Stats:
     def periodic_stats_logger(cls):
         logd = defaultdict(lambda: 0)
         logd['hostname'] = cls.hostname
-        logd['service_name'] = cls.service_name
+        logd['service_name'] = cls.name
 
         for key, value in cls.http_stats.items():
             logd[key] += value
@@ -94,9 +95,8 @@ class Aggregator:
         return cls._stats.to_dict()
 
     @classmethod
-    def periodic_aggregated_stats_logger(cls):
+    def periodic_aggregated_stats_logger(cls, service):
         hostname = socket.gethostbyname(socket.gethostname())
-        service_name = '_'.join(setproctitle.getproctitle().split('_')[1:-1])
 
         logd = cls._stats.to_dict()
         logs = []
@@ -110,7 +110,7 @@ class Aggregator:
                     'method': k,
                     'server_type': server_type,
                     'hostname': hostname,
-                    'service_name': service_name,
+                    'service_name': service.name,
                     'average_response_time': v['average'],
                     'total_request_count': v['count'],
                     'success_count': v['success_count']

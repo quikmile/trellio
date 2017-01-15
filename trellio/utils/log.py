@@ -110,7 +110,7 @@ DEFAULT_CONFIG_YAML = """
             datefmt: '%Y-%m-%d %H:%M:%S,%f'
 
     root:
-        handlers: [stream, service]
+        handlers: [stream,]
         level: INFO
 
     loggers:
