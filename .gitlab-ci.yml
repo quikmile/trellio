@@ -1,16 +1,3 @@
-image: python:3.6
-
-before_script:
-    - apk update
-    - apk add cmake
-    - export LD_LIBRARY_PATH=$HOME/.local/lib/:$LD_LIBRARY_PATH
-    - git clone --depth=1 https://github.com/lloyd/yajl.git
-    - cd yajl && ./configure --prefix=$HOME/.local/
-    - cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local/ && make && make install
-    - cd ..
-    - pip install -r requirements.txt
-
-
 stages:
   - test
   - package
@@ -19,6 +6,13 @@ stages:
 test:
   stage: test
   script:
+    - apt-get install -y cmake
+    - export LD_LIBRARY_PATH=$HOME/.local/lib/:$LD_LIBRARY_PATH
+    - git clone --depth=1 https://github.com/lloyd/yajl.git
+    - cd yajl && ./configure --prefix=$HOME/.local/
+    - cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local/ && make && make install
+    - cd ..
+    - pip install -r requirements.txt
     - py.test --ignore tests/integration --assert=plain
     - py.test tests/integration --assert=plain
 
