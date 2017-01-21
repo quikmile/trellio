@@ -1,18 +1,15 @@
 image: technomaniac/trellio:latest
 
-before_script: pip install -r requirements.txt
-
 stages:
   - test
   - package
 
-
 test:
   stage: test
   script:
+    - pip install -r requirements.txt --upgrade
     - py.test --ignore tests/integration --assert=plain
     - py.test tests/integration --assert=plain
-
 
 package:
   stage: package
