@@ -12,5 +12,6 @@ from .services import (get, post, head, put, patch, delete, options, trace)  # n
 from .utils import log  # noqa
 from .utils.log import setup_logging  # noqa
 from .wrappers import Response, Request  # noqa
+from .management.commands import *
 
 __version__ = '1.1.22b'

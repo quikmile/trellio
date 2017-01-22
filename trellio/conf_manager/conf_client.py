@@ -1,4 +1,5 @@
 import os
+import copy
 import json
 import importlib
 
@@ -20,7 +21,7 @@ GLOBAL_CONFIG = {
   "SIGNALS": None,
   "TCP_CLIENTS": None,
   "HTTP_CLIENTS": None,
-  "SERVICE_PATH": '',
+  # "SERVICE_PATH": "",
   "DATABASE_SETTINGS": {
     "database": "",
     "user": "",
@@ -53,17 +54,25 @@ class ConfigHandler:
     tcp_clients_key = "TCP_CLIENTS"
     http_clients_key = "HTTP_CLIENTS"
     database_key = 'DATABASE_SETTINGS'
-    service_path_key = "SERVICE_PATH"
+    # service_path_key = "SERVICE_PATH"
 
-    def __init__(self, host_class):
+    def __init__(self, host_class, service_path):
+        self.service_path = service_path
         self.settings = None
         self.host = host_class
 
+    def setup(self):
+        if self.settings:
+            self.find_services()
+        else:
+            raise InvalidConfigurationError('call set_config before!!')
+
+
     def find_services(self):
-        service_path = os.path.abspath(self.settings[self.service_path_key])
+        service_path = self.service_path
         if not service_path:
             service_path = os.path.abspath('service.py')
-        self.import_class_from_path(service_path)
+        self.service_module = importlib.import_module(service_path)
 
     @property
     def service_name(self):
@@ -73,7 +82,7 @@ class ConfigHandler:
         clients = []
         tcp_client_paths = self.settings[self.tcp_clients_key]
         for i in tcp_client_paths:
-            cur_client = self.import_class_from_path(i)
+            module, cur_client = self.import_class_from_path(i)
             clients.append(cur_client)
         return clients
 
@@ -81,7 +90,7 @@ class ConfigHandler:
         clients = []
         http_client_paths = self.settings[self.http_clients_key]
         for i in http_client_paths:
-            cur_client = self.import_class_from_path(i)
+            module, cur_client = self.import_class_from_path(i)
             clients.append(cur_client)
         return clients
 
@@ -105,22 +114,20 @@ class ConfigHandler:
     def get_database_settings(self):
         return self.settings[self.database_key]
 
-    def set_config(self, config_path=''):
-        if not config_path:
-            config_file = 'config.json'
-        else:
-            config_file = config_path
+    def set_config(self, config_path):
         settings = None
-        with open(config_file) as f:
+        with open(config_path) as f:
             settings = json.load(f)
-
-        self.settings = GLOBAL_CONFIG.update(settings)
+        new_settings = copy.deepcopy(GLOBAL_CONFIG)
+        new_settings.update(settings)
+        self.settings = new_settings
 
     def get_http_service(self):
         from trellio.services import HTTPService
         service_sub_class = HTTPService.__subclasses__()[0]
         http_service = service_sub_class(self.settings[self.service_name_key],
                                          self.settings[self.http_version_key],
+                                         self.settings[self.http_host_key],
                                          self.settings[self.http_port_key])
         return http_service
 
@@ -129,6 +136,7 @@ class ConfigHandler:
         service_sub_class = TCPService.__subclasses__()[0]
         tcp_service = service_sub_class(self.settings[self.service_name_key],
                                          self.settings[self.tcp_version_key],
+                                         self.settings[self.tcp_host_key],
                                          self.settings[self.tcp_port_key])
         return tcp_service
 
@@ -139,6 +147,7 @@ class ConfigHandler:
         module = importlib.import_module(module_name)
         class_value = getattr(module, class_name)
         return module, class_value
+
 
     def enable_middlewares(self):
         middlewares = self.settings[self.middleware_key]
