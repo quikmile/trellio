@@ -2,7 +2,7 @@ image: technomaniac/trellio:latest
 
 stages:
   - test
-  - package
+  - pypi
 
 test:
   stage: test
@@ -11,9 +11,7 @@ test:
     - py.test --ignore tests/integration --assert=plain
     - py.test tests/integration --assert=plain
 
-package:
-  stage: package
-  script: python setup.py sdist
-  artifacts:
-    paths:
-      - dist/
+pypi:
+  stage: pypi
+  script:
+    - python setup.py sdist upload
