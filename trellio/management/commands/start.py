@@ -1,17 +1,17 @@
-import os
 import json
-from trellio.conf_manager.conf_client import ConfigHandler
-from trellio.management.exceptions import InvalidCMDArguments
-from trellio.management.commands.base import ManagementCommand, ManagementRegistry
+import os
+
+from ...conf_manager.conf_client import ConfigHandler
+from ...management.commands.base import ManagementCommand, ManagementRegistry
+from ...management.exceptions import InvalidCMDArguments
+
 
 class TrellioHostCommand(ManagementCommand):
-
     '''
     usage:python trellio_admin.py start_service <config_path> <(optional)service_file_path>
     '''
 
     name = 'runserver'
-
 
     def parse_args(self, args):
         new_args = {}
@@ -19,9 +19,9 @@ class TrellioHostCommand(ManagementCommand):
             if '=' in arg:
                 broken = arg.split('=')
                 new_args[broken[0]] = broken[1]
-            elif not new_args.get('config') and ind==0:
+            elif not new_args.get('config') and ind == 0:
                 new_args['config'] = arg
-            elif not new_args.get('service') and ind==1:
+            elif not new_args.get('service') and ind == 1:
                 new_args['service'] = arg
         if not new_args.get('config'):
             new_args['config'] = './config.json'
@@ -50,20 +50,18 @@ class TrellioHostCommand(ManagementCommand):
 
     def setup_environment_variables(self):
         try:
-            os.environ['CONFIG_FILE'] = self.args['config']#config file path
+            os.environ['CONFIG_FILE'] = self.args['config']  # config file path
         except IndexError:
             raise InvalidCMDArguments
         db_settings = self.config_manager.get_database_settings()
         os.environ['DATABASE_SETTINGS'] = json.dumps(db_settings)
         prefix = 'DATABASE_'
         for key in self.config_manager.get_database_settings():
-            os.environ[prefix+key.upper()] = db_settings[key]
+            os.environ[prefix + key.upper()] = db_settings[key]
 
     def run(self):
         self.setup()
         self.host_class.run()
 
+
 ManagementRegistry.register(TrellioHostCommand)
-
-
-
