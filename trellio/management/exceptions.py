@@ -1,0 +1,2 @@
+class InvalidCMDArguments(Exception):
+    pass
