@@ -1,20 +1,31 @@
-language : python
+language: python
 sudo: false
+
 python:
-    - "3.5"
-    - "3.6"
+  - '3.5'
+  - '3.6'
+
 services:
-    - redis-server
+  - redis-server
 
 before_install:
-    - export LD_LIBRARY_PATH=$HOME/.local/lib/:$LD_LIBRARY_PATH
-    - git clone --depth=1 https://github.com/lloyd/yajl.git
-    - cd yajl && ./configure --prefix=$HOME/.local/
-    - cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local/ && make && make install
-    - cd ..
+  - export LD_LIBRARY_PATH=$HOME/.local/lib/:$LD_LIBRARY_PATH
+  - git clone --depth=1 https://github.com/lloyd/yajl.git
+  - cd yajl && ./configure --prefix=$HOME/.local/
+  - cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local/ && make && make install
+  - cd ..
 
-install: "pip install -r requirements.txt"
+install: pip install -r requirements.txt
 script:
-    - py.test --ignore tests/integration --assert=plain
-    - py.test tests/integration --assert=plain
-    - python setup.py sdist upload
+  - py.test --ignore tests/integration --assert=plain
+  - py.test tests/integration --assert=plain
+  - python setup.py sdist upload
+
+deploy:
+  provider: pypi
+  user: technomaniac
+  password:
+    secure: I8I7k7Idzl2z7rbtmO8ITtG3AX5nmdTTe2EqRixEmZQBxLXKLG6kF9EynwojycaFDfHfmrhoUubuAhFz0Q4P1SRqtqaZWRJdqjMLAL5iqpjTnrKIfshNQYzWkEJ7u4V7prQ5lJbG/sPgGiYCBeZjAT6J7XShbsZ9tK3IiJUHH5B7/Lsu83sbuSOVdlhyqumMWkHflselisEfYA9ngR8IkKffr8uPIgg+O90t8Fa3uz4Z9CXSViZxe2t7lZXVntIjHRGJbwTUzCJqbWWljetl6HJQcgCwIN7ORpSxZ9K6m0VOKkYafD2u2XCo+p3BDnQc4Ovs3BAyadFKRG+WKi4fsHK9lldD2E+e3jaR8/EbjHJb5qcFWtnvLC0J72pCRXuKRn5BlWjo6zMQ4UPDu/kh93k2Y21YKqhZ6ch3fVAwEs7j0RLYVhS7TBPKoRcX+lfsjojCO/NKG63UC/xzKhUSc2sR4DwGlBp1Kzo3qTUvalmy+ry2xNSC1fFs2bYgVcjSP4n1aR/vJ40q/cCOaDQDpuHL+JEaSxiHar0IvHVF5OuUt9hsxhhGU/LlmW8cZaplNCrsRlYQns8qsBEEyJ3I+xEdrVRmOWrNolxyGjkD1MFr9BoXr4MK9pQjrVBHRZEm43YFAkgkODtdC/hmExyTrJg4brG9JKxDKwTmW5bHaak=
+  on:
+    tags: true
+    branch: master
