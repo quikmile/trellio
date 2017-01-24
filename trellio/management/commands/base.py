@@ -4,6 +4,7 @@ class ManagementCommand:
     def run(self):
         raise NotImplementedError
 
+
 class ManagementRegistry:
     _management_reg = {}
 

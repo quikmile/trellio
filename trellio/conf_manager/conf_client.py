@@ -4,38 +4,38 @@ import json
 import importlib
 
 GLOBAL_CONFIG = {
-  "HOST_NAME": "",
-  "SERVICE_NAME": "",
-  "TCP_VERSION": "",
-  "HTTP_VERSION": "",
-  "VERSION": '',
-  "REGISTRY_HOST": "",
-  "REGISTRY_PORT": '',
-  "REDIS_HOST": "",
-  "REDIS_PORT": '',
-  "HTTP_HOST": "",
-  "TCP_HOST": "",
-  "HTTP_PORT": '',
-  "TCP_PORT": '',
-  "MIDDLEWARES": None,
-  "SIGNALS": None,
-  "TCP_CLIENTS": None,
-  "HTTP_CLIENTS": None,
-  # "SERVICE_PATH": "",
-  "DATABASE_SETTINGS": {
-    "database": "",
-    "user": "",
-    "password": "",
-    "host": "",
-    "port": ''
-  }
+    "HOST_NAME": "",
+    "SERVICE_NAME": "",
+    "TCP_VERSION": "",
+    "HTTP_VERSION": "",
+    "VERSION": '',
+    "REGISTRY_HOST": "",
+    "REGISTRY_PORT": '',
+    "REDIS_HOST": "",
+    "REDIS_PORT": '',
+    "HTTP_HOST": "",
+    "TCP_HOST": "",
+    "HTTP_PORT": '',
+    "TCP_PORT": '',
+    "MIDDLEWARES": None,
+    "SIGNALS": None,
+    "TCP_CLIENTS": None,
+    "HTTP_CLIENTS": None,
+    "DATABASE_SETTINGS": {
+        "database": "",
+        "user": "",
+        "password": "",
+        "host": "",
+        "port": ''
+    }
 }
+
 
 class InvalidConfigurationError(Exception):
     pass
 
-class ConfigHandler:
 
+class ConfigHandler:
     middleware_key = 'MIDDLEWARES'
     signal_key = 'SIGNALS'
     service_name_key = 'SERVICE_NAME'
@@ -54,6 +54,7 @@ class ConfigHandler:
     tcp_clients_key = "TCP_CLIENTS"
     http_clients_key = "HTTP_CLIENTS"
     database_key = 'DATABASE_SETTINGS'
+
     # service_path_key = "SERVICE_PATH"
 
     def __init__(self, host_class, service_path):
@@ -66,7 +67,6 @@ class ConfigHandler:
             self.find_services()
         else:
             raise InvalidConfigurationError('call set_config before!!')
-
 
     def find_services(self):
         service_path = self.service_path
@@ -104,7 +104,7 @@ class ConfigHandler:
         host.registry_port = self.settings[self.reg_port_key]
         host.pubsub_host = self.settings[self.redis_host_key]
         host.pubsub_port = self.settings[self.redis_port_key]
-        host.ronin = True#todo only for testing
+        host.ronin = True  # todo only for testing
         host.name = self.settings[self.host_name]
         http_service.clients = [i() for i in http_clients]
         tcp_service.clients = [i() for i in tcp_clients]
@@ -135,9 +135,9 @@ class ConfigHandler:
         from trellio.services import TCPService
         service_sub_class = TCPService.__subclasses__()[0]
         tcp_service = service_sub_class(self.settings[self.service_name_key],
-                                         self.settings[self.tcp_version_key],
-                                         self.settings[self.tcp_host_key],
-                                         self.settings[self.tcp_port_key])
+                                        self.settings[self.tcp_version_key],
+                                        self.settings[self.tcp_host_key],
+                                        self.settings[self.tcp_port_key])
         return tcp_service
 
     def import_class_from_path(self, path):
@@ -147,7 +147,6 @@ class ConfigHandler:
         module = importlib.import_module(module_name)
         class_value = getattr(module, class_name)
         return module, class_value
-
 
     def enable_middlewares(self):
         middlewares = self.settings[self.middleware_key]
@@ -161,7 +160,6 @@ class ConfigHandler:
                 middle_cls.append(class_value())
         http_service.http_middlewares = middle_cls
 
-
     def enable_signals(self):
         '''
         e.g signal_dict = {signal_path:signal_receiver_path_list, ....}
@@ -172,8 +170,4 @@ class ConfigHandler:
             sig_module, signal_class = self.import_class_from_path(i)
             for j in signal_dict[i]:
                 recv_module, recv_coro = self.import_class_from_path(j)
-                signal_class.register(recv_coro)#registering reciever
-
-
-
-
+                signal_class.register(recv_coro)  # registering reciever
