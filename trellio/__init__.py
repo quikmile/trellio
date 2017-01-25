@@ -3,7 +3,6 @@ __all__ = ['Host', 'TCPServiceClient', 'TCPService', 'HTTPService', 'HTTPService
            'Registry', 'RequestException', 'Response', 'Request', 'log', 'setup_logging', 'apideprecated',
            'TrellioServiceException', 'TrellioServiceError', 'ConfigHandler', 'ManagementCommand',
            'ManagementRegistry', 'InvalidCMDArguments']
-
 from .exceptions import RequestException, TrellioServiceError, TrellioServiceException  # noqa
 from .host import Host  # noqa
 from .management.commands import *
@@ -14,7 +13,4 @@ from .services import (get, post, head, put, patch, delete, options, trace)  # n
 from .utils import log  # noqa
 from .utils.log import setup_logging  # noqa
 from .wrappers import Response, Request  # noqa
-from .conf_manager.conf_client import ConfigHandler, InvalidConfigurationError
-from .management.commands import ManagementRegistry, ManagementCommand, InvalidCMDArguments
-
 __version__ = '1.1.23b'
