@@ -7,14 +7,14 @@ from functools import partial
 
 from aiohttp.web import Application
 
-from trellio.registry_client import RegistryClient
-from trellio.services import HTTPService, TCPService
-from trellio.utils.decorators import deprecated
-from trellio.utils.stats import Stats, Aggregator
 from .bus import TCPBus, PubSubBus
 from .protocol_factory import get_trellio_protocol
+from .registry_client import RegistryClient
+from .services import HTTPService, TCPService
 from .signals import ServiceReady
+from .utils.decorators import deprecated
 from .utils.log import setup_logging
+from .utils.stats import Stats, Aggregator
 
 
 class Host:
@@ -123,7 +123,6 @@ class Host:
             cls._set_process_name()
             cls._set_signal_handlers()
             cls._start_server()
-            cls.post_init()
         else:
             cls._logger.error('No services to host')
 
@@ -197,6 +196,7 @@ class Host:
         cls._logger.info("Event loop running forever, press CTRL+C to interrupt.")
         cls._logger.info("pid %s: send SIGINT or SIGTERM to exit." % os.getpid())
         try:
+            cls.post_init()  # handling post init just before loop is running forever
             asyncio.get_event_loop().run_forever()
         except Exception as e:
             print(e)

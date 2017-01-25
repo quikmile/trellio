@@ -8,7 +8,7 @@ from ...management.exceptions import InvalidCMDArguments
 
 class TrellioHostCommand(ManagementCommand):
     '''
-    usage:python trellio_admin.py start_service <config_path> <(optional)service_file_path>
+    usage:python trellio.py start_service <config_path> <(optional)service_file_path>
     '''
 
     name = 'runserver'
@@ -21,19 +21,15 @@ class TrellioHostCommand(ManagementCommand):
                 new_args[broken[0]] = broken[1]
             elif not new_args.get('config') and ind == 0:
                 new_args['config'] = arg
-            elif not new_args.get('service') and ind == 1:
-                new_args['service'] = arg
         if not new_args.get('config'):
-            new_args['config'] = './config.json'
-        if not new_args.get('service'):
-            new_args['service'] = 'service.py'
+            new_args['config'] = os.path.abspath('./config.json')
         return new_args
 
     def __init__(self, args):
         from trellio.host import Host
         self.args = self.parse_args(args)
         self.host_class = Host
-        self.config_manager = ConfigHandler(self.host_class, self.args['service'])
+        self.config_manager = ConfigHandler(self.host_class)
         self.setup_config()
 
     def setup_config(self):
@@ -44,7 +40,6 @@ class TrellioHostCommand(ManagementCommand):
 
     def setup(self):
         self.setup_config()
-        self.config_manager.setup()
         self.setup_environment_variables()
         self.config_manager.setup_host()
 

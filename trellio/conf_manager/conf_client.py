@@ -1,7 +1,6 @@
 import copy
 import importlib
 import json
-import os
 
 GLOBAL_CONFIG = {
     "HOST_NAME": "",
@@ -18,7 +17,6 @@ GLOBAL_CONFIG = {
     "HTTP_PORT": '',
     "TCP_PORT": '',
     "MIDDLEWARES": None,
-    "SIGNALS": None,
     "TCP_CLIENTS": None,
     "HTTP_CLIENTS": None,
     "DATABASE_SETTINGS": {
@@ -57,22 +55,9 @@ class ConfigHandler:
 
     # service_path_key = "SERVICE_PATH"
 
-    def __init__(self, host_class, service_path):
-        self.service_path = service_path
+    def __init__(self, host_class):
         self.settings = None
         self.host = host_class
-
-    def setup(self):
-        if self.settings:
-            self.find_services()
-        else:
-            raise InvalidConfigurationError('call set_config before!!')
-
-    def find_services(self):
-        service_path = self.service_path
-        if not service_path:
-            service_path = os.path.abspath('service.py')
-        self.service_module = importlib.import_module(service_path)
 
     @property
     def service_name(self):
@@ -100,6 +85,8 @@ class ConfigHandler:
         tcp_service = self.get_tcp_service()
         tcp_clients = self.get_tcp_clients()
         http_clients = self.get_http_clients()
+        self.enable_middlewares(http_service)
+        self.enable_signals()
         host.registry_host = self.settings[self.reg_host_key]
         host.registry_port = self.settings[self.reg_port_key]
         host.pubsub_host = self.settings[self.redis_host_key]
@@ -148,9 +135,8 @@ class ConfigHandler:
         class_value = getattr(module, class_name)
         return module, class_value
 
-    def enable_middlewares(self):
-        middlewares = self.settings[self.middleware_key]
-        http_service = self.host.get_http_service()
+    def enable_middlewares(self, http_service):
+        middlewares = self.settings[self.middleware_key] or {}
         middle_cls = []
         for i in middlewares:
             module, class_value = self.import_class_from_path(i)
@@ -165,7 +151,7 @@ class ConfigHandler:
         e.g signal_dict = {signal_path:signal_receiver_path_list, ....}
         :return:
         '''
-        signal_dict = self.settings[self.signal_key]
+        signal_dict = self.settings[self.signal_key] or {}
         for i in signal_dict.keys():
             sig_module, signal_class = self.import_class_from_path(i)
             for j in signal_dict[i]:
