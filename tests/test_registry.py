@@ -1,5 +1,5 @@
-from unittest import mock
 import uuid
+from unittest import mock
 
 
 def service_registered_successfully(registry, *services):
@@ -42,7 +42,6 @@ def subscriber_returned_successfully(response, service):
 
 
 def test_register_independent_service(registry, service_a1):
-
     registry.register_service(
         packet={'params': service_a1}, registry_protocol=mock.Mock())
 
@@ -51,7 +50,6 @@ def test_register_independent_service(registry, service_a1):
 
 
 def test_register_dependent_service(registry, service_a1, service_b1):
-
     registry.register_service(
         packet={'params': service_b1}, registry_protocol=mock.Mock())
     assert not no_pending_services(registry)

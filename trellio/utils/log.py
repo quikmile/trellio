@@ -1,14 +1,14 @@
+import asyncio
+import datetime
+import logging
+import logging.config
+import sys
+from functools import partial, wraps
 from logging import Handler
 from queue import Queue
 from threading import Thread
-import logging.config
-import logging
-import asyncio
-import datetime
-import yaml
-import sys
 
-from functools import partial, wraps
+import yaml
 from pythonjsonlogger import jsonlogger
 
 RED = '\033[91m'

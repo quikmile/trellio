@@ -1,5 +1,6 @@
-from trellio.registry import Registry, Repository
 import pytest
+
+from trellio.registry import Registry, Repository
 from .factories import ServiceFactory, EndpointFactory
 
 

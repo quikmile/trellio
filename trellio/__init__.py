@@ -4,6 +4,7 @@ __all__ = ['Host', 'TCPServiceClient', 'TCPService', 'HTTPService', 'HTTPService
            'TrellioServiceException', 'TrellioServiceError', 'ConfigHandler', 'ManagementCommand',
            'ManagementRegistry', 'InvalidCMDArguments']
 
+from .conf_manager.conf_client import *
 from .exceptions import RequestException, TrellioServiceError, TrellioServiceException  # noqa
 from .host import Host  # noqa
 from .management.commands import *

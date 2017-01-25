@@ -1,10 +1,9 @@
-import json
 import datetime
+import json
 from time import mktime
 
 
 class TrellioEncoder(json.JSONEncoder):
-
     """
     json dump encoder class
     """

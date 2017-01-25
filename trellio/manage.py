@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import sys
 
 from .management.core import execute_from_command_line

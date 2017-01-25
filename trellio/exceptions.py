@@ -1,6 +1,4 @@
-
 class TrellioServiceException(Exception):
-
     """
     To be subclassed by service level exceptions and indicate exceptions that
     are to be handled at the service level itself.
@@ -10,7 +8,6 @@ class TrellioServiceException(Exception):
 
 
 class TrellioServiceError(Exception):
-
     """
     Unlike TrellioServiceExceptions these will be counted as errors and must only
     be used when a service encounters an error it couldn't handle at its level.

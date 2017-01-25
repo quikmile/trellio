@@ -1,5 +1,6 @@
-import requests
 import multiprocessing
+
+import requests
 
 from trellio import Host, HTTPService, TCPService, TCPServiceClient, Registry
 from trellio import request, get, Response, api
