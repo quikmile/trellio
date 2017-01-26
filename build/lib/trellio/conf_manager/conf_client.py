@@ -16,9 +16,9 @@ GLOBAL_CONFIG = {
     "TCP_HOST": "",
     "HTTP_PORT": '',
     "TCP_PORT": '',
-    "MIDDLEWARES": [],
-    "TCP_CLIENTS": [],
-    "HTTP_CLIENTS": [],
+    "MIDDLEWARES": None,
+    "TCP_CLIENTS": None,
+    "HTTP_CLIENTS": None,
     "DATABASE_SETTINGS": {
         "database": "",
         "user": "",
