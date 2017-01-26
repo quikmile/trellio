@@ -52,7 +52,7 @@ class TrellioHostCommand(ManagementCommand):
         os.environ['DATABASE_SETTINGS'] = json.dumps(db_settings)
         prefix = 'DATABASE_'
         for key in self.config_manager.get_database_settings():
-            os.environ[prefix + key.upper()] = db_settings[key]
+            os.environ[prefix + key.upper()] = str(db_settings[key])
 
     def run(self):
         self.setup()

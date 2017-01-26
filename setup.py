@@ -41,7 +41,6 @@ with open('trellio/__init__.py', 'rb') as i:
 
 setup(
     name='trellio',
-    scripts=['trellio/manage.py'],
     packages=find_packages(exclude=['examples', 'tests']),
     version=version,
     description='Python 3 asyncio based micro-framework for micro-service architecture',
