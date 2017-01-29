@@ -1,8 +1,9 @@
 import asyncio
 import logging
-import setproctitle
 import socket
 from collections import defaultdict, deque
+
+import setproctitle
 
 
 class Stats:
