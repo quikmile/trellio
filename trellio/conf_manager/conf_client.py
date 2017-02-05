@@ -3,6 +3,7 @@ import importlib
 import json
 
 GLOBAL_CONFIG = {
+    "RONIN":False,
     "HOST_NAME": "",
     "SERVICE_NAME": "",
     "TCP_VERSION": "",
@@ -16,6 +17,7 @@ GLOBAL_CONFIG = {
     "TCP_HOST": "",
     "HTTP_PORT": '',
     "TCP_PORT": '',
+    "SIGNALS":{},
     "MIDDLEWARES": None,
     "TCP_CLIENTS": None,
     "HTTP_CLIENTS": None,
@@ -52,6 +54,7 @@ class ConfigHandler:
     tcp_clients_key = "TCP_CLIENTS"
     http_clients_key = "HTTP_CLIENTS"
     database_key = 'DATABASE_SETTINGS'
+    ronin_key = "RONIN"
 
     # service_path_key = "SERVICE_PATH"
 
@@ -91,7 +94,7 @@ class ConfigHandler:
         host.registry_port = self.settings[self.reg_port_key]
         host.pubsub_host = self.settings[self.redis_host_key]
         host.pubsub_port = self.settings[self.redis_port_key]
-        host.ronin = True  # todo only for testing
+        host.ronin = self.settings[self.ronin_key]
         host.name = self.settings[self.host_name]
         http_service.clients = [i() for i in http_clients]
         tcp_service.clients = [i() for i in tcp_clients]
