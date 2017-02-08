@@ -44,15 +44,7 @@ class TrellioHostCommand(ManagementCommand):
         self.config_manager.setup_host()
 
     def setup_environment_variables(self):
-        try:
-            os.environ['CONFIG_FILE'] = self.args['config']  # config file path
-        except IndexError:
-            raise InvalidCMDArguments
-        db_settings = self.config_manager.get_database_settings()
-        os.environ['DATABASE_SETTINGS'] = json.dumps(db_settings)
-        prefix = 'DATABASE_'
-        for key in self.config_manager.get_database_settings():
-            os.environ[prefix + key.upper()] = db_settings[key]
+        pass #todo not needed right now
 
     def run(self):
         self.setup()
