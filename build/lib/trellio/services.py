@@ -11,7 +11,6 @@ from aiohttp.web import Response
 
 from .exceptions import RequestException, ClientException, TrellioServiceException
 from .packet import MessagePacket
-from .utils.helpers import Singleton  # we need non singleton subclasses
 from .utils.ordered_class_member import OrderedClassMembers
 from .utils.stats import Aggregator, Stats
 
@@ -388,7 +387,7 @@ class _Service:
         get_event_loop().call_later(timeout, timer_callback, future)
 
 
-class TCPServiceClient(Singleton, _Service):
+class TCPServiceClient(_Service):
     def __init__(self, service_name, service_version, ssl_context=None):
         super(TCPServiceClient, self).__init__(service_name, service_version)
         self._pending_requests = {}
@@ -604,7 +603,7 @@ class HTTPService(_ServiceHost, metaclass=OrderedClassMembers):
         return Response(status=200, content_type='application/json', body=json.dumps(res_d).encode())
 
 
-class HTTPServiceClient(Singleton, _Service):
+class HTTPServiceClient(_Service):
     def __init__(self, service_name, service_version):
         super(HTTPServiceClient, self).__init__(service_name, service_version)
 

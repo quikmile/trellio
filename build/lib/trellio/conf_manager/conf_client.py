@@ -1,10 +1,8 @@
 import copy
 import importlib
 import json
-import os
 
 GLOBAL_CONFIG = {
-    "RONIN": False,
     "HOST_NAME": "",
     "SERVICE_NAME": "",
     "TCP_VERSION": "",
@@ -18,8 +16,9 @@ GLOBAL_CONFIG = {
     "TCP_HOST": "",
     "HTTP_PORT": '',
     "TCP_PORT": '',
-    "SIGNALS": {},
-    "MIDDLEWARES": {},
+    "MIDDLEWARES": None,
+    "TCP_CLIENTS": None,
+    "HTTP_CLIENTS": None,
     "DATABASE_SETTINGS": {
         "database": "",
         "user": "",
@@ -50,8 +49,9 @@ class ConfigHandler:
     tcp_host_key = "TCP_HOST"
     http_port_key = "HTTP_PORT"
     tcp_port_key = "TCP_PORT"
+    tcp_clients_key = "TCP_CLIENTS"
+    http_clients_key = "HTTP_CLIENTS"
     database_key = 'DATABASE_SETTINGS'
-    ronin_key = "RONIN"
 
     # service_path_key = "SERVICE_PATH"
 
@@ -64,14 +64,20 @@ class ConfigHandler:
         return self.settings[self.service_name_key]
 
     def get_tcp_clients(self):
-        from trellio.services import TCPServiceClient
-        tcp_clients = TCPServiceClient.__subclasses__()
-        return tcp_clients
+        clients = []
+        tcp_client_paths = self.settings[self.tcp_clients_key]
+        for i in tcp_client_paths:
+            module, cur_client = self.import_class_from_path(i)
+            clients.append(cur_client)
+        return clients
 
     def get_http_clients(self):
-        from trellio.services import HTTPServiceClient
-        http_clients = HTTPServiceClient.__subclasses__()
-        return http_clients
+        clients = []
+        http_client_paths = self.settings[self.http_clients_key]
+        for i in http_client_paths:
+            module, cur_client = self.import_class_from_path(i)
+            clients.append(cur_client)
+        return clients
 
     def setup_host(self):
         host = self.host
@@ -85,10 +91,10 @@ class ConfigHandler:
         host.registry_port = self.settings[self.reg_port_key]
         host.pubsub_host = self.settings[self.redis_host_key]
         host.pubsub_port = self.settings[self.redis_port_key]
-        host.ronin = self.settings[self.ronin_key]
+        host.ronin = True  # todo only for testing
         host.name = self.settings[self.host_name]
-        http_service.clients = [i() for i in http_clients + tcp_clients]
-        tcp_service.clients = http_service.clients
+        http_service.clients = [i() for i in http_clients]
+        tcp_service.clients = [i() for i in tcp_clients]
         host.attach_service(http_service)
         host.attach_service(tcp_service)
 
@@ -102,12 +108,6 @@ class ConfigHandler:
         new_settings = copy.deepcopy(GLOBAL_CONFIG)
         new_settings.update(settings)
         self.settings = new_settings
-        parent_dir = os.getcwd().split('/')[-1]
-        client_path = parent_dir+'.clients'
-        try:
-            importlib.import_module(client_path)
-        except:
-            pass
 
     def get_http_service(self):
         from trellio.services import HTTPService

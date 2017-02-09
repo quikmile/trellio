@@ -4,6 +4,7 @@ class Borg(object):
     def __init__(self):
         self.__dict__ = self.__shared_state
 
+
 class Singleton(object):
     _instance = None
 
