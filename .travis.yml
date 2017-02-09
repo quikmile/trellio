@@ -15,7 +15,7 @@ before_install:
   - cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local/ && make && make install
   - cd ..
 
-install: pip install -r requirements.txt
+install: pip install -r requirements.txt --upgrade
 script:
   - py.test --ignore tests/integration --assert=plain
   - py.test tests/integration --assert=plain
