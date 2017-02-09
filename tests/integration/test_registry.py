@@ -4,8 +4,7 @@ import requests
 
 from trellio import Host, HTTPService, TCPService, TCPServiceClient
 from trellio import request, get, Response, api
-from trellio.registry import Repository
-from trellio.registry import Registry
+from trellio.registry import Registry, Repository
 
 processes = []
 
