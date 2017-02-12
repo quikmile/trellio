@@ -1,6 +1,7 @@
 import copy
 import importlib
 import json
+import os
 
 GLOBAL_CONFIG = {
     "RONIN": False,
@@ -99,6 +100,12 @@ class ConfigHandler:
         new_settings = copy.deepcopy(GLOBAL_CONFIG)
         new_settings.update(settings)
         self.settings = new_settings
+        parent_dir = os.getcwd().split('/')[-1]
+        client_path = parent_dir+'.clients'
+        try:
+            importlib.import_module(client_path)
+        except:
+            pass
 
     def get_http_service(self):
         from trellio.services import HTTPService
