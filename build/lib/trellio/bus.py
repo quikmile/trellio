@@ -3,6 +3,7 @@ import json
 import logging
 import random
 import uuid
+from asyncio.coroutines import coroutine
 from collections import defaultdict
 from functools import partial
 
@@ -81,6 +82,7 @@ class TCPBus:
                     futures.append(future)
         return asyncio.gather(*futures, return_exceptions=False)
 
+    @coroutine
     def connect(self):
         clients = self.tcp_host.clients if self.tcp_host else self.http_host.clients
         for client in clients:
