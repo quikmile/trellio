@@ -37,9 +37,7 @@ class ConfigHandler:
     signal_key = 'SIGNALS'
     service_name_key = 'SERVICE_NAME'
     host_name = 'HOST_NAME'
-    http_version_key = 'HTTP_VERSION'
-    tcp_version_key = 'TCP_VERSION'
-    version_key = "VERSION"
+    service_version_key = 'SERVICE_VERSION'
     reg_host_key = "REGISTRY_HOST"
     reg_port_key = "REGISTRY_PORT"
     redis_host_key = "REDIS_HOST"
@@ -121,7 +119,7 @@ class ConfigHandler:
         from trellio.services import HTTPService
         service_sub_class = HTTPService.__subclasses__()[0]
         http_service = service_sub_class(self.settings[self.service_name_key],
-                                         self.settings[self.http_version_key],
+                                         self.settings[self.service_version_key],
                                          self.settings[self.http_host_key],
                                          self.settings[self.http_port_key])
         return http_service
@@ -130,7 +128,7 @@ class ConfigHandler:
         from trellio.services import TCPService
         service_sub_class = TCPService.__subclasses__()[0]
         tcp_service = service_sub_class(self.settings[self.service_name_key],
-                                        self.settings[self.tcp_version_key],
+                                        self.settings[self.service_version_key],
                                         self.settings[self.tcp_host_key],
                                         self.settings[self.tcp_port_key])
         return tcp_service
