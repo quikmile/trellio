@@ -19,7 +19,7 @@ GLOBAL_CONFIG = {
     "HTTP_PORT": '',
     "TCP_PORT": '',
     "SIGNALS": {},
-    "MIDDLEWARES": {},
+    "MIDDLEWARES": [],
     "DATABASE_SETTINGS": {
         "database": "",
         "user": "",
@@ -79,7 +79,6 @@ class ConfigHandler:
         tcp_service = self.get_tcp_service()
         tcp_clients = self.get_tcp_clients()
         http_clients = self.get_http_clients()
-        self.enable_middlewares(http_service)
         self.enable_signals()
         host.registry_host = self.settings[self.reg_host_key]
         host.registry_port = self.settings[self.reg_port_key]
@@ -87,10 +86,13 @@ class ConfigHandler:
         host.pubsub_port = self.settings[self.redis_port_key]
         host.ronin = self.settings[self.ronin_key]
         host.name = self.settings[self.host_name]
-        http_service.clients = [i() for i in http_clients + tcp_clients]
-        tcp_service.clients = http_service.clients
-        host.attach_service(http_service)
-        host.attach_service(tcp_service)
+        if http_service:
+            http_service.clients = [i() for i in http_clients + tcp_clients]
+            self.enable_middlewares(http_service)
+            host.attach_service(http_service)
+        if tcp_service:
+            tcp_service.clients = [i() for i in http_clients + tcp_clients]
+            host.attach_service(tcp_service)
 
     def get_database_settings(self):
         return self.settings[self.database_key]
@@ -111,21 +113,23 @@ class ConfigHandler:
 
     def get_http_service(self):
         from trellio.services import HTTPService
-        service_sub_class = HTTPService.__subclasses__()[0]
-        http_service = service_sub_class(self.settings[self.service_name_key],
-                                         self.settings[self.http_version_key],
-                                         self.settings[self.http_host_key],
-                                         self.settings[self.http_port_key])
-        return http_service
+        service_sub_class = HTTPService.__subclasses__()
+        if service_sub_class:
+            http_service = service_sub_class[0](self.settings[self.service_name_key],
+                                             self.settings[self.http_version_key],
+                                             self.settings[self.http_host_key],
+                                             self.settings[self.http_port_key])
+            return http_service
 
     def get_tcp_service(self):
         from trellio.services import TCPService
-        service_sub_class = TCPService.__subclasses__()[0]
-        tcp_service = service_sub_class(self.settings[self.service_name_key],
-                                        self.settings[self.tcp_version_key],
-                                        self.settings[self.tcp_host_key],
-                                        self.settings[self.tcp_port_key])
-        return tcp_service
+        service_sub_class = TCPService.__subclasses__()
+        if service_sub_class:
+            tcp_service = service_sub_class[0](self.settings[self.service_name_key],
+                                            self.settings[self.tcp_version_key],
+                                            self.settings[self.tcp_host_key],
+                                            self.settings[self.tcp_port_key])
+            return tcp_service
 
     def import_class_from_path(self, path):
         broken = path.split('.')
@@ -136,7 +140,7 @@ class ConfigHandler:
         return module, class_value
 
     def enable_middlewares(self, http_service):
-        middlewares = self.settings[self.middleware_key] or {}
+        middlewares = self.settings[self.middleware_key] or []
         middle_cls = []
         for i in middlewares:
             module, class_value = self.import_class_from_path(i)
