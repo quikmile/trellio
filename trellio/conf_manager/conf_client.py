@@ -98,10 +98,11 @@ class ConfigHandler:
         new_settings = copy.deepcopy(GLOBAL_CONFIG)
         new_settings.update(settings)
         self.settings = new_settings
+
         parent_dir = os.getcwd().split('/')[-1]
+
         client_path = parent_dir + '.clients'
         service_path1 = parent_dir + '.service'
-        service_path2 = parent_dir + '.services'
         try:
             try:
                 importlib.import_module(client_path)
@@ -111,7 +112,6 @@ class ConfigHandler:
                 importlib.import_module(service_path1)
             except:
                 pass
-            importlib.import_module(service_path2)
         except:
             pass
 
