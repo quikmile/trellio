@@ -1,3 +1,6 @@
+class InvalidSignalType(Exception):
+    pass
+
 class BaseSignal:
     _registry_list = []
 
@@ -7,6 +10,7 @@ class BaseSignal:
 
     @classmethod
     async def _run(cls, *args, **kwargs):
+        print('service ready run called')
         for i in cls._registry_list:
             try:
                 await i[0](*args, **kwargs)
@@ -17,3 +21,14 @@ class BaseSignal:
 
 class ServiceReady(BaseSignal):
     _registry_list = []
+
+
+def register(signal_type,soft=False):
+
+    def decorator(receiver):
+        if not issubclass(signal_type, BaseSignal):
+            raise InvalidSignalType
+        signal_type.register(receiver,soft)
+        return receiver
+    return decorator
+

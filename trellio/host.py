@@ -110,10 +110,6 @@ class Host:
             warnings.warn('TCP service is already attached')
 
     @classmethod
-    def post_init(cls):
-        asyncio.get_event_loop().run_until_complete(ServiceReady._run(cls))
-
-    @classmethod
     def run(cls):
         """ Fires up the event loop and starts serving attached services
         """
@@ -195,8 +191,9 @@ class Host:
             cls._logger.info('Serving HTTP on {}'.format(http_server.sockets[0].getsockname()))
         cls._logger.info("Event loop running forever, press CTRL+C to interrupt.")
         cls._logger.info("pid %s: send SIGINT or SIGTERM to exit." % os.getpid())
+        cls._logger.info("Triggering ServiceReady signal")
+        asyncio.get_event_loop().run_until_complete(ServiceReady._run())
         try:
-            cls.post_init()  # handling post init just before loop is running forever
             asyncio.get_event_loop().run_forever()
         except Exception as e:
             print(e)
