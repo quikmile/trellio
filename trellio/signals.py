@@ -1,6 +1,7 @@
 class InvalidSignalType(Exception):
     pass
 
+
 class BaseSignal:
     _registry_list = []
 
@@ -23,12 +24,11 @@ class ServiceReady(BaseSignal):
     _registry_list = []
 
 
-def register(signal_type,soft=False):
-
+def register(signal_type, soft=False):
     def decorator(receiver):
         if not issubclass(signal_type, BaseSignal):
             raise InvalidSignalType
-        signal_type.register(receiver,soft)
+        signal_type.register(receiver, soft)
         return receiver
-    return decorator
 
+    return decorator
