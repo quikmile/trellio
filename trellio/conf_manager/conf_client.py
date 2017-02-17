@@ -7,19 +7,17 @@ GLOBAL_CONFIG = {
     "RONIN": False,
     "HOST_NAME": "",
     "SERVICE_NAME": "",
-    "TCP_VERSION": "",
-    "HTTP_VERSION": "",
-    "VERSION": '',
+    "SERVICE_VERSION": "",
     "REGISTRY_HOST": "",
     "REGISTRY_PORT": '',
     "REDIS_HOST": "",
     "REDIS_PORT": '',
     "HTTP_HOST": "",
     "TCP_HOST": "",
-    "HTTP_PORT": '',
-    "TCP_PORT": '',
+    "HTTP_PORT": "",
+    "TCP_PORT": "",
     "SIGNALS": {},
-    "MIDDLEWARES": [],
+    "MIDDLEWARES": {},
     "DATABASE_SETTINGS": {
         "database": "",
         "user": "",
@@ -39,9 +37,7 @@ class ConfigHandler:
     signal_key = 'SIGNALS'
     service_name_key = 'SERVICE_NAME'
     host_name = 'HOST_NAME'
-    http_version_key = 'HTTP_VERSION'
-    tcp_version_key = 'TCP_VERSION'
-    version_key = "VERSION"
+    service_version_key = 'SERVICE_VERSION'
     reg_host_key = "REGISTRY_HOST"
     reg_port_key = "REGISTRY_PORT"
     redis_host_key = "REDIS_HOST"
@@ -79,6 +75,7 @@ class ConfigHandler:
         tcp_service = self.get_tcp_service()
         tcp_clients = self.get_tcp_clients()
         http_clients = self.get_http_clients()
+        self.enable_middlewares(http_service)
         self.enable_signals()
         host.registry_host = self.settings[self.reg_host_key]
         host.registry_port = self.settings[self.reg_port_key]
@@ -86,13 +83,10 @@ class ConfigHandler:
         host.pubsub_port = self.settings[self.redis_port_key]
         host.ronin = self.settings[self.ronin_key]
         host.name = self.settings[self.host_name]
-        if http_service:
-            http_service.clients = [i() for i in http_clients + tcp_clients]
-            self.enable_middlewares(http_service)
-            host.attach_service(http_service)
-        if tcp_service:
-            tcp_service.clients = [i() for i in http_clients + tcp_clients]
-            host.attach_service(tcp_service)
+        http_service.clients = [i() for i in http_clients + tcp_clients]
+        tcp_service.clients = http_service.clients
+        host.attach_service(http_service)
+        host.attach_service(tcp_service)
 
     def get_database_settings(self):
         return self.settings[self.database_key]
@@ -105,31 +99,39 @@ class ConfigHandler:
         new_settings.update(settings)
         self.settings = new_settings
         parent_dir = os.getcwd().split('/')[-1]
-        client_path = parent_dir+'.clients'
+        client_path = parent_dir + '.clients'
+        service_path1 = parent_dir + '.service'
+        service_path2 = parent_dir + '.services'
         try:
-            importlib.import_module(client_path)
+            try:
+                importlib.import_module(client_path)
+            except:
+                pass
+            try:
+                importlib.import_module(service_path1)
+            except:
+                pass
+            importlib.import_module(service_path2)
         except:
             pass
 
     def get_http_service(self):
         from trellio.services import HTTPService
-        service_sub_class = HTTPService.__subclasses__()
-        if service_sub_class:
-            http_service = service_sub_class[0](self.settings[self.service_name_key],
-                                             self.settings[self.http_version_key],
-                                             self.settings[self.http_host_key],
-                                             self.settings[self.http_port_key])
-            return http_service
+        service_sub_class = HTTPService.__subclasses__()[0]
+        http_service = service_sub_class(self.settings[self.service_name_key],
+                                         self.settings[self.service_version_key],
+                                         self.settings[self.http_host_key],
+                                         self.settings[self.http_port_key])
+        return http_service
 
     def get_tcp_service(self):
         from trellio.services import TCPService
-        service_sub_class = TCPService.__subclasses__()
-        if service_sub_class:
-            tcp_service = service_sub_class[0](self.settings[self.service_name_key],
-                                            self.settings[self.tcp_version_key],
-                                            self.settings[self.tcp_host_key],
-                                            self.settings[self.tcp_port_key])
-            return tcp_service
+        service_sub_class = TCPService.__subclasses__()[0]
+        tcp_service = service_sub_class(self.settings[self.service_name_key],
+                                        self.settings[self.service_version_key],
+                                        self.settings[self.tcp_host_key],
+                                        self.settings[self.tcp_port_key])
+        return tcp_service
 
     def import_class_from_path(self, path):
         broken = path.split('.')
@@ -140,7 +142,7 @@ class ConfigHandler:
         return module, class_value
 
     def enable_middlewares(self, http_service):
-        middlewares = self.settings[self.middleware_key] or []
+        middlewares = self.settings[self.middleware_key] or {}
         middle_cls = []
         for i in middlewares:
             module, class_value = self.import_class_from_path(i)
