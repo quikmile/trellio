@@ -142,7 +142,7 @@ class ConfigHandler:
         return module, class_value
 
     def enable_middlewares(self, http_service):
-        middlewares = self.settings[self.middleware_key] or {}
+        middlewares = self.settings[self.middleware_key] or []
         middle_cls = []
         for i in middlewares:
             module, class_value = self.import_class_from_path(i)
