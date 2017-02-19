@@ -208,26 +208,31 @@ def make_request(func, self, args, kwargs, method):
 
 def _enable_http_middleware(func):  # pre and post http, processing
     @wraps(func)
-    def f(self, *args, **kwargs):
+    async def f(self, *args, **kwargs):
         if hasattr(self, 'http_middlewares'):
             for i in self.http_middlewares:
                 if hasattr(i, 'pre_request'):
                     pre_request = getattr(i, 'pre_request')
                     if callable(pre_request):
                         try:
-                            pre_request(self, *args, **kwargs)  # passing service as first argument
+                            res = await pre_request(self, *args, **kwargs)  # passing service as first argument
+                            if res:
+                                return res
                         except Exception as e:
                             return Response(status=400, content_type='application/json',
                                             body=json.dumps(
                                                 {'error': str(e), 'sector': getattr(i, 'middleware_info')}).encode())
-        result = func(self, *args, **kwargs)
+        _func = coroutine(func) #func is a generator object
+        result = await _func(self, *args, **kwargs)
         if hasattr(self, 'http_middlewares'):
             for i in self.http_middlewares:
                 if hasattr(i, 'post_request'):
                     post_request = getattr(i, 'post_request')
                     if callable(post_request):
                         try:
-                            post_request(self, result, *args, **kwargs)
+                            res = await post_request(self, result, *args, **kwargs)
+                            if res:
+                                return res
                         except Exception as e:
                             return Response(status=400, content_type='application/json',
                                             body=json.dumps(
