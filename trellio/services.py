@@ -580,7 +580,7 @@ def default_preflight_response(request):
 
 class HTTPService(_ServiceHost, metaclass=OrderedClassMembers):
     def __init__(self, service_name, service_version, host_ip=None, host_port=None, ssl_context=None,
-                 allow_cross_domain=False,
+                 allow_cross_domain=True,
                  preflight_response=default_preflight_response):
         super(HTTPService, self).__init__(service_name, service_version, host_ip, host_port)
         self._ssl_context = ssl_context
