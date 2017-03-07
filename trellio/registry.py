@@ -6,7 +6,7 @@ import ssl
 import time
 from collections import defaultdict, namedtuple
 from functools import partial
-
+from aiohttp import web
 from again.utils import natural_sort
 
 from .packet import ControlPacket
@@ -174,6 +174,14 @@ class Registry:
         except:
             self._ssl_context = None
 
+    def _create_http_app(self):
+        app = web.Application()
+        app.router.add_get('/registry/dump/', registry_dump_handle)
+        handler = app.make_handler(access_log=registry.logger)
+        task = asyncio.get_event_loop().create_server(handler, registry._ip, 8008)
+        http_server = asyncio.get_event_loop().run_until_complete(task)
+        return http_server
+
     def start(self):
         setup_logging("registry")
         self._loop.add_signal_handler(getattr(signal, 'SIGINT'), partial(self._stop, 'SIGINT'))
@@ -181,12 +189,14 @@ class Registry:
         registry_coroutine = self._loop.create_server(
             partial(get_trellio_protocol, self), self._ip, self._port, ssl=self._ssl_context)
         server = self._loop.run_until_complete(registry_coroutine)
+        http_server = self._create_http_app()
         try:
             self._loop.run_forever()
         except Exception as e:
             print(e)
         finally:
             server.close()
+            http_server.close()
             self._loop.run_until_complete(server.wait_closed())
             self._loop.close()
 
@@ -378,6 +388,16 @@ class Registry:
         else:
             self._pong(packet, protocol)
 
+async def registry_dump_handle(request):
+    '''
+    only read
+    :param request:
+    :return:
+    '''
+    registry = registry_dump_handle.registry
+    repo = registry._repository._registered_services
+    return web.Response(status=400, content_type='application/json', body=json.dumps(repo).encode())
+
 
 if __name__ == '__main__':
     from setproctitle import setproctitle
@@ -385,5 +405,6 @@ if __name__ == '__main__':
     REGISTRY_HOST = None
     REGISTRY_PORT = 4500
     registry = Registry(REGISTRY_HOST, REGISTRY_PORT, Repository())
+    registry_dump_handle.registry = registry
     registry.periodic_uptime_logger()
     registry.start()
