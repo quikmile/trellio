@@ -41,7 +41,7 @@ class Repository:
     def register_service(self, service: Service):
         service_name = self._get_full_service_name(service.name, service.version)
         service_entry = (service.host, service.port, service.node_id, service.type)
-        self._registered_services[service.name][service.version] = [service_entry]#only one entry per service_name/ver
+        self._registered_services[service.name][service.version].append(service_entry)
         #in future there can be multiple nodes for same service, for load balancing purposes
         self._pending_services[service_name].append(service.node_id)
         self._uptimes[service_name][service.host] = {
@@ -50,7 +50,8 @@ class Repository:
         }
 
         if len(service.dependencies):
-            self._service_dependencies[service_name] = service.dependencies
+            if not self._service_dependencies.get(service.name):
+                self._service_dependencies[service_name] = service.dependencies
 
     def is_pending(self, name, version):
         return self._get_full_service_name(name, version) in self._pending_services
@@ -282,7 +283,8 @@ class Registry:
             for dependency in dependencies:
                 instances = self._repository.get_versioned_instances(dependency['name'], dependency['version'])#list
                 tcp_instances = [instance for instance in instances if instance[3] == 'tcp']
-                if not len(tcp_instances):
+                if not len(tcp_instances):#means the dependency doesn't have an activated tcp service, so registration
+                    #pending
                     should_activate = False
                     break
             for node in self._repository.get_pending_instances(name, version):#node is node id
@@ -395,8 +397,12 @@ async def registry_dump_handle(request):
     :return:
     '''
     registry = registry_dump_handle.registry
-    repo = registry._repository._registered_services
-    return web.Response(status=400, content_type='application/json', body=json.dumps(repo).encode())
+    response_dict = {}
+    repo = registry._repository
+    response_dict['registered_services'] = repo._registered_services
+    response_dict['uptimes'] = repo._uptimes
+    response_dict['service_dependencies'] = repo._service_dependencies
+    return web.Response(status=400, content_type='application/json', body=json.dumps(response_dict).encode())
 
 
 if __name__ == '__main__':
