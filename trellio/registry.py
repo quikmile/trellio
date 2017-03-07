@@ -177,9 +177,10 @@ class Registry:
 
     def _create_http_app(self):
         app = web.Application()
+        registry_dump_handle.registry = self
         app.router.add_get('/registry/dump/', registry_dump_handle)
-        handler = app.make_handler(access_log=registry.logger)
-        task = asyncio.get_event_loop().create_server(handler, registry._ip, 8008)
+        handler = app.make_handler(access_log=self.logger)
+        task = asyncio.get_event_loop().create_server(handler, self._ip, 8008)
         http_server = asyncio.get_event_loop().run_until_complete(task)
         return http_server
 
@@ -411,6 +412,5 @@ if __name__ == '__main__':
     REGISTRY_HOST = None
     REGISTRY_PORT = 4500
     registry = Registry(REGISTRY_HOST, REGISTRY_PORT, Repository())
-    registry_dump_handle.registry = registry
     registry.periodic_uptime_logger()
     registry.start()
