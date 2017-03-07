@@ -42,6 +42,7 @@ class Repository:
         service_name = self._get_full_service_name(service.name, service.version)
         service_entry = (service.host, service.port, service.node_id, service.type)
         self._registered_services[service.name][service.version] = [service_entry]#only one entry per service_name/ver
+        #in future there can be multiple nodes for same service, for load balancing purposes
         self._pending_services[service_name].append(service.node_id)
         self._uptimes[service_name][service.host] = {
             'uptime': int(time.time()),
