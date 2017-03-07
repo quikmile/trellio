@@ -41,7 +41,7 @@ class Repository:
     def register_service(self, service: Service):
         service_name = self._get_full_service_name(service.name, service.version)
         service_entry = (service.host, service.port, service.node_id, service.type)
-        self._registered_services[service.name][service.version].append(service_entry)
+        self._registered_services[service.name][service.version] = [service_entry]#only one entry per service_name/ver
         self._pending_services[service_name].append(service.node_id)
         self._uptimes[service_name][service.host] = {
             'uptime': int(time.time()),
@@ -49,8 +49,7 @@ class Repository:
         }
 
         if len(service.dependencies):
-            if self._service_dependencies.get(service_name) is None:
-                self._service_dependencies[service_name] = service.dependencies
+            self._service_dependencies[service_name] = service.dependencies
 
     def is_pending(self, name, version):
         return self._get_full_service_name(name, version) in self._pending_services
@@ -267,15 +266,15 @@ class Registry:
 
     def _handle_pending_registrations(self):
         for name, version in self._repository.get_pending_services():
-            dependencies = self._repository.get_dependencies(name, version)
+            dependencies = self._repository.get_dependencies(name, version)#list
             should_activate = True
             for dependency in dependencies:
-                instances = self._repository.get_versioned_instances(dependency['name'], dependency['version'])
+                instances = self._repository.get_versioned_instances(dependency['name'], dependency['version'])#list
                 tcp_instances = [instance for instance in instances if instance[3] == 'tcp']
                 if not len(tcp_instances):
                     should_activate = False
                     break
-            for node in self._repository.get_pending_instances(name, version):
+            for node in self._repository.get_pending_instances(name, version):#node is node id
                 if should_activate:
                     self._send_activated_packet(name, version, node)
                     self._repository.remove_pending_instance(name, version, node)
@@ -381,7 +380,6 @@ class Registry:
 
 if __name__ == '__main__':
     from setproctitle import setproctitle
-
     setproctitle("trellio-registry")
     REGISTRY_HOST = None
     REGISTRY_PORT = 4500
