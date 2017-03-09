@@ -395,10 +395,12 @@ class _Service:
 
 class TCPServiceClient(Singleton, _Service):
     def __init__(self, service_name, service_version, ssl_context=None):
-        super(TCPServiceClient, self).__init__(service_name, service_version)
-        self._pending_requests = {}
-        self.tcp_bus = None
-        self._ssl_context = ssl_context
+        if not self.has_inited():#to maintain singleton behaviour
+            super(TCPServiceClient, self).__init__(service_name, service_version)
+            self._pending_requests = {}
+            self.tcp_bus = None
+            self._ssl_context = ssl_context
+            self.init_done()
 
     @property
     def ssl_context(self):
@@ -611,7 +613,9 @@ class HTTPService(_ServiceHost, metaclass=OrderedClassMembers):
 
 class HTTPServiceClient(Singleton, _Service):
     def __init__(self, service_name, service_version):
-        super(HTTPServiceClient, self).__init__(service_name, service_version)
+        if not self.has_inited():
+            super(HTTPServiceClient, self).__init__(service_name, service_version)
+            self.init_done()
 
     def _send_http_request(self, app_name, method, entity, params):
         response = yield from self._http_bus.send_http_request(app_name, self.name, self.version, method, entity,
