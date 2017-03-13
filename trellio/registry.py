@@ -6,7 +6,7 @@ import ssl
 import time
 from collections import defaultdict, namedtuple
 from functools import partial
-
+from aiohttp import web
 from again.utils import natural_sort
 
 from .packet import ControlPacket
@@ -42,6 +42,7 @@ class Repository:
         service_name = self._get_full_service_name(service.name, service.version)
         service_entry = (service.host, service.port, service.node_id, service.type)
         self._registered_services[service.name][service.version].append(service_entry)
+        #in future there can be multiple nodes for same service, for load balancing purposes
         self._pending_services[service_name].append(service.node_id)
         self._uptimes[service_name][service.host] = {
             'uptime': int(time.time()),
@@ -49,7 +50,7 @@ class Repository:
         }
 
         if len(service.dependencies):
-            if self._service_dependencies.get(service_name) is None:
+            if not self._service_dependencies.get(service.name):
                 self._service_dependencies[service_name] = service.dependencies
 
     def is_pending(self, name, version):
@@ -174,6 +175,15 @@ class Registry:
         except:
             self._ssl_context = None
 
+    def _create_http_app(self):
+        app = web.Application()
+        registry_dump_handle.registry = self
+        app.router.add_get('/registry/dump/', registry_dump_handle)
+        handler = app.make_handler(access_log=self.logger)
+        task = asyncio.get_event_loop().create_server(handler, self._ip, 8008)
+        http_server = asyncio.get_event_loop().run_until_complete(task)
+        return http_server
+
     def start(self):
         setup_logging("registry")
         self._loop.add_signal_handler(getattr(signal, 'SIGINT'), partial(self._stop, 'SIGINT'))
@@ -181,12 +191,14 @@ class Registry:
         registry_coroutine = self._loop.create_server(
             partial(get_trellio_protocol, self), self._ip, self._port, ssl=self._ssl_context)
         server = self._loop.run_until_complete(registry_coroutine)
+        http_server = self._create_http_app()
         try:
             self._loop.run_forever()
         except Exception as e:
             print(e)
         finally:
             server.close()
+            http_server.close()
             self._loop.run_until_complete(server.wait_closed())
             self._loop.close()
 
@@ -267,15 +279,16 @@ class Registry:
 
     def _handle_pending_registrations(self):
         for name, version in self._repository.get_pending_services():
-            dependencies = self._repository.get_dependencies(name, version)
+            dependencies = self._repository.get_dependencies(name, version)#list
             should_activate = True
             for dependency in dependencies:
-                instances = self._repository.get_versioned_instances(dependency['name'], dependency['version'])
+                instances = self._repository.get_versioned_instances(dependency['name'], dependency['version'])#list
                 tcp_instances = [instance for instance in instances if instance[3] == 'tcp']
-                if not len(tcp_instances):
+                if not len(tcp_instances):#means the dependency doesn't have an activated tcp service, so registration
+                    #pending
                     should_activate = False
                     break
-            for node in self._repository.get_pending_instances(name, version):
+            for node in self._repository.get_pending_instances(name, version):#node is node id
                 if should_activate:
                     self._send_activated_packet(name, version, node)
                     self._repository.remove_pending_instance(name, version, node)
@@ -378,10 +391,23 @@ class Registry:
         else:
             self._pong(packet, protocol)
 
+async def registry_dump_handle(request):
+    '''
+    only read
+    :param request:
+    :return:
+    '''
+    registry = registry_dump_handle.registry
+    response_dict = {}
+    repo = registry._repository
+    response_dict['registered_services'] = repo._registered_services
+    response_dict['uptimes'] = repo._uptimes
+    response_dict['service_dependencies'] = repo._service_dependencies
+    return web.Response(status=400, content_type='application/json', body=json.dumps(response_dict).encode())
+
 
 if __name__ == '__main__':
     from setproctitle import setproctitle
-
     setproctitle("trellio-registry")
     REGISTRY_HOST = None
     REGISTRY_PORT = 4500

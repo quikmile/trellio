@@ -4,7 +4,7 @@ import os
 import signal
 import warnings
 from functools import partial
-
+import aiohttp_cors
 from aiohttp.web import Application
 
 from .bus import TCPBus, PubSubBus
@@ -159,15 +159,23 @@ class Host:
     @classmethod
     def _make_aiohttp_handler(cls):
         app = Application(loop=asyncio.get_event_loop())
+        cors = aiohttp_cors.setup(app, defaults={
+            "*": aiohttp_cors.ResourceOptions(
+                allow_credentials=True,
+                expose_headers="*",
+                allow_headers="*",
+            )
+        })
         for each in cls._http_service.__ordered__:
             # iterate all attributes in the service looking for http endpoints and add them
             fn = getattr(cls._http_service, each)
             if callable(fn) and getattr(fn, 'is_http_method', False):
                 for path in fn.paths:
-                    app.router.add_route(fn.method, path, fn)
+                    route = app.router.add_route(fn.method, path, fn)
                     if cls._http_service.cross_domain_allowed:
                         # add an 'options' for this specific path to make it CORS friendly
-                        app.router.add_route('options', path, cls._http_service.preflight_response)
+                        # app.router.add_route('options', path, cls._http_service.preflight_response)
+                        cors.add(route)
         handler = app.make_handler(access_log=cls._logger)
         return handler
 

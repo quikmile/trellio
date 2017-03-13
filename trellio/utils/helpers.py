@@ -7,6 +7,13 @@ class Borg(object):
 
 class Singleton(object):
     _instance = None
+    _init_ran = False
+
+    def has_inited(self):
+        return self._init_ran
+
+    def init_done(self):
+        self._init_ran = True
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
