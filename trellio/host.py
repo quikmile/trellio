@@ -4,7 +4,7 @@ import os
 import signal
 import warnings
 from functools import partial
-import aiohttp_cors
+
 from aiohttp.web import Application
 
 from .bus import TCPBus, PubSubBus
