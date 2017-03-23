@@ -1,6 +1,5 @@
 again==1.2.21
 aiohttp==2.0.2
-aiohttp-cors==0.5.0
 appdirs==1.4.3
 async-retrial==0.7
 async-timeout==1.2.0
