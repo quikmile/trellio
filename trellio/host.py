@@ -174,7 +174,7 @@ class Host:
                     route = app.router.add_route(fn.method, path, fn)
                     if cls._http_service.cross_domain_allowed:
                         # add an 'options' for this specific path to make it CORS friendly
-                        # app.router.add_route('options', path, cls._http_service.preflight_response)
+                        app.router.add_route('options', path, cls._http_service.preflight_response)
                         cors.add(route)
         handler = app.make_handler(access_log=cls._logger)
         return handler

@@ -222,7 +222,7 @@ def _enable_http_middleware(func):  # pre and post http, processing
                             return Response(status=400, content_type='application/json',
                                             body=json.dumps(
                                                 {'error': str(e), 'sector': getattr(i, 'middleware_info')}).encode())
-        _func = coroutine(func) #func is a generator object
+        _func = coroutine(func)  # func is a generator object
         result = await _func(self, *args, **kwargs)
         if hasattr(self, 'http_middlewares'):
             for i in self.http_middlewares:
@@ -395,7 +395,7 @@ class _Service:
 
 class TCPServiceClient(Singleton, _Service):
     def __init__(self, service_name, service_version, ssl_context=None):
-        if not self.has_inited():#to maintain singleton behaviour
+        if not self.has_inited():  # to maintain singleton behaviour
             super(TCPServiceClient, self).__init__(service_name, service_version)
             self._pending_requests = {}
             self.tcp_bus = None

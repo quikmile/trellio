@@ -60,6 +60,7 @@ celerybeat-schedule
 venv/
 ENV/
 
+*.orig
 # Spyder project settings
 .spyderproject
 
