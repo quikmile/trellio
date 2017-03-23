@@ -1,11 +1,11 @@
 import json
 import logging
+import setproctitle
 import socket
 import time
 from asyncio import iscoroutine, coroutine, wait_for, TimeoutError, Future, get_event_loop, async
 from functools import wraps, partial
 
-import setproctitle
 from again.utils import unique_hex
 from aiohttp.web import Response
 
@@ -576,7 +576,7 @@ class TCPService(_ServiceHost):
 
 def default_preflight_response(request):
     headers = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE',
-               'Access-Control-Allow-Headers': 'accept, content-type'}
+               'Access-Control-Allow-Headers': 'Accept, Content-Type, Authorization'}
     return Response(status=200, headers=headers)
 
 
