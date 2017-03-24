@@ -575,8 +575,10 @@ class TCPService(_ServiceHost):
 
 
 def default_preflight_response(request):
-    headers = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE',
-               'Access-Control-Allow-Headers': 'accept, content-type'}
+    headers = {'Access-Control-Allow-Origin': '*',
+               'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE',
+               'Access-Control-Allow-Headers': 'Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Authorization, Access-Control-Request-Method, Access-Control-Request-Headers',
+               'Access-Control-Allow-Credentials': 'true'}
     return Response(status=204, headers=headers)
 
 
