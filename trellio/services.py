@@ -575,8 +575,8 @@ class TCPService(_ServiceHost):
 
 
 def default_preflight_response(request):
-    headers = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-               'Access-Control-Allow-Headers': 'accept, content-type', 'Access-Control-Max-Age': 86400}
+    headers = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE',
+               'Access-Control-Allow-Headers': 'accept, content-type'}
     return Response(status=204, headers=headers)
 
 
