@@ -138,7 +138,8 @@ class ConfigHandler:
                                        capacity=1,
                                        password=self.settings[self.log_stmp_password])
         handler.setLevel(logging.ERROR)
-        return handler
+        if not self.settings[self.ronin_key]:
+            return handler
 
     def get_http_service(self):
         from trellio.services import HTTPService
