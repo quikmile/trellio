@@ -83,7 +83,6 @@ class ConfigHandler:
         return http_clients
 
     def setup_host(self):
-        self.setup_logging()
         host = self.host
         http_service = self.get_http_service()
         tcp_service = self.get_tcp_service()
@@ -129,7 +128,7 @@ class ConfigHandler:
         except:
             pass
 
-    def setup_logging(self):
+    def get_smtp_logging_handler(self):
         handler = BufferingSMTPHandler(mailhost=self.settings[self.log_stmp_host],
                                        mailport=self.settings[self.log_stmp_port],
                                        fromaddr=self.settings[self.log_stmp_email],
@@ -139,7 +138,7 @@ class ConfigHandler:
                                        capacity=1,
                                        password=self.settings[self.log_stmp_password])
         handler.setLevel(logging.ERROR)
-        logging.getLogger().addHandler(handler)
+        return handler
 
     def get_http_service(self):
         from trellio.services import HTTPService

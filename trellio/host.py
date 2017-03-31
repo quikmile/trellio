@@ -247,6 +247,11 @@ class Host:
         service = cls._tcp_service if cls._tcp_service else cls._http_service
         identifier = '{}_{}'.format(service.name, service.socket_address[1])
         setup_logging(identifier)
+        try:
+            logger = logging.getLogger()
+            logger.addHandler(cls.__smpt_handler)
+        except:
+            pass
         Stats.service_name = service.name
         Aggregator._service_name = service.name
         Aggregator.periodic_aggregated_stats_logger()
