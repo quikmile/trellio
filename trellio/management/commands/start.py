@@ -47,6 +47,7 @@ class TrellioHostCommand(ManagementCommand):
 
     def run(self):
         self.setup()
+        self.host_class._smpt_handler = self.config_manager.get_smtp_logging_handler()
         self.host_class.run()
 
 

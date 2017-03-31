@@ -2,7 +2,6 @@ import copy
 import importlib
 import json
 import os
-import smtpd
 import logging
 
 from trellio.utils.log_handlers import BufferingSMTPHandler
@@ -12,7 +11,7 @@ GLOBAL_CONFIG = {
     "HOST_NAME": "",
     "LOG_EMAIL_HOST": "",
     "LOG_EMAIL_PORT": "",
-    "LOG_EMAIL_FROM": "",
+    "LOG_EMAIL": "",
     "LOG_EMAIL_PASSWORD": "",
     "LOG_EMAIL_RECEIVERS": [],
     "SERVICE_NAME": "",
@@ -43,7 +42,7 @@ class InvalidConfigurationError(Exception):
 
 class ConfigHandler:
     log_stmp_host = 'LOG_EMAIL_HOST'
-    log_stmp_from = 'LOG_EMAIL_FROM'
+    log_stmp_email = 'LOG_EMAIL'
     log_stmp_port = 'LOG_EMAIL_PORT'
     log_stmp_password = 'LOG_EMAIL_PASSWORD'
     error_email_receivers = 'LOG_EMAIL_RECEIVERS'
@@ -129,20 +128,18 @@ class ConfigHandler:
         except:
             pass
 
-    def setup_logging(self):
-        self.start_log_smtp_host()
+    def get_smtp_logging_handler(self):
         handler = BufferingSMTPHandler(mailhost=self.settings[self.log_stmp_host],
                                        mailport=self.settings[self.log_stmp_port],
-                                        fromaddr=self.settings[self.log_stmp_from],
-                                        toaddrs=self.settings[self.error_email_receivers],
-                                        subject='Exception At %s:%s'%(self.settings[self.service_name_key],
+                                       fromaddr=self.settings[self.log_stmp_email],
+                                       toaddrs=self.settings[self.error_email_receivers],
+                                       subject='Exception At %s:%s'%(self.settings[self.service_name_key],
                                                                     self.settings[self.service_version_key]),
-                                       capacity=10)
+                                       capacity=1,
+                                       password=self.settings[self.log_stmp_password])
         handler.setLevel(logging.ERROR)
-        logging.getLogger().addHandler(handler)
-
-    def start_log_smtp_host(self):
-        pass
+        if not self.settings[self.ronin_key]:
+            return handler
 
     def get_http_service(self):
         from trellio.services import HTTPService
