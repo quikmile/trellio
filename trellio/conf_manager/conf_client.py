@@ -2,10 +2,19 @@ import copy
 import importlib
 import json
 import os
+import smtpd
+import logging
+
+from trellio.utils.log_handlers import BufferingSMTPHandler
 
 GLOBAL_CONFIG = {
     "RONIN": False,
     "HOST_NAME": "",
+    "LOG_EMAIL_HOST": "",
+    "LOG_EMAIL_PORT": "",
+    "LOG_EMAIL_FROM": "",
+    "LOG_EMAIL_PASSWORD": "",
+    "LOG_EMAIL_RECEIVERS": [],
     "SERVICE_NAME": "",
     "SERVICE_VERSION": "",
     "REGISTRY_HOST": "",
@@ -33,6 +42,11 @@ class InvalidConfigurationError(Exception):
 
 
 class ConfigHandler:
+    log_stmp_host = 'LOG_EMAIL_HOST'
+    log_stmp_from = 'LOG_EMAIL_FROM'
+    log_stmp_port = 'LOG_EMAIL_PORT'
+    log_stmp_password = 'LOG_EMAIL_PASSWORD'
+    error_email_receivers = 'LOG_EMAIL_RECEIVERS'
     middleware_key = 'MIDDLEWARES'
     signal_key = 'SIGNALS'
     service_name_key = 'SERVICE_NAME'
@@ -114,6 +128,21 @@ class ConfigHandler:
             importlib.import_module(service_path2)
         except:
             pass
+
+    def setup_logging(self):
+        self.start_log_smtp_host()
+        handler = BufferingSMTPHandler(mailhost=self.settings[self.log_stmp_host],
+                                       mailport=self.settings[self.log_stmp_port],
+                                        fromaddr=self.settings[self.log_stmp_from],
+                                        toaddrs=self.settings[self.error_email_receivers],
+                                        subject='Exception At %s:%s'%(self.settings[self.service_name_key],
+                                                                    self.settings[self.service_version_key]),
+                                       capacity=10)
+        handler.setLevel(logging.ERROR)
+        logging.getLogger().addHandler(handler)
+
+    def start_log_smtp_host(self):
+        pass
 
     def get_http_service(self):
         from trellio.services import HTTPService
