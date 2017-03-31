@@ -38,6 +38,7 @@ class Host:
     _tcp_service = None
     _http_service = None
     _logger = logging.getLogger(__name__)
+    _smtp_handler = None
 
     @classmethod
     def configure(cls, name, registry_host: str = "0.0.0.0", registry_port: int = 4500,
@@ -247,11 +248,9 @@ class Host:
         service = cls._tcp_service if cls._tcp_service else cls._http_service
         identifier = '{}_{}'.format(service.name, service.socket_address[1])
         setup_logging(identifier)
-        try:
+        if cls._smtp_handler:
             logger = logging.getLogger()
-            logger.addHandler(cls._smpt_handler)
-        except Exception as e:
-            print(e, 'cant setup smtp handler')
+            logger.addHandler(cls._smtp_handler)
         Stats.service_name = service.name
         Aggregator._service_name = service.name
         Aggregator.periodic_aggregated_stats_logger()

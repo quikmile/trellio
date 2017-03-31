@@ -1,25 +1,21 @@
 import copy
 import importlib
 import json
-import os
 import logging
+import os
 
-from trellio.utils.log_handlers import BufferingSMTPHandler
+from ..utils.log_handlers import BufferingSMTPHandler
 
 GLOBAL_CONFIG = {
     "RONIN": False,
     "HOST_NAME": "",
-    "LOG_EMAIL_HOST": "",
-    "LOG_EMAIL_PORT": "",
-    "LOG_EMAIL": "",
-    "LOG_EMAIL_PASSWORD": "",
-    "LOG_EMAIL_RECEIVERS": [],
+    "ADMIN_EMAILS": [],
     "SERVICE_NAME": "",
     "SERVICE_VERSION": "",
     "REGISTRY_HOST": "",
-    "REGISTRY_PORT": '',
+    "REGISTRY_PORT": "",
     "REDIS_HOST": "",
-    "REDIS_PORT": '',
+    "REDIS_PORT": "",
     "HTTP_HOST": "",
     "TCP_HOST": "",
     "HTTP_PORT": "",
@@ -31,8 +27,9 @@ GLOBAL_CONFIG = {
         "user": "",
         "password": "",
         "host": "",
-        "port": ''
-    }
+        "port": ""
+    },
+    "SMTP_SETTINGS": {}
 }
 
 
@@ -41,11 +38,11 @@ class InvalidConfigurationError(Exception):
 
 
 class ConfigHandler:
-    log_stmp_host = 'LOG_EMAIL_HOST'
-    log_stmp_email = 'LOG_EMAIL'
-    log_stmp_port = 'LOG_EMAIL_PORT'
-    log_stmp_password = 'LOG_EMAIL_PASSWORD'
-    error_email_receivers = 'LOG_EMAIL_RECEIVERS'
+    smtp_host = 'SMTP_HOST'
+    smtp_user = 'SMTP_USER'
+    smtp_port = 'SMTP_PORT'
+    smtp_password = 'SMTP_PASSWORD'
+    admin_emails = 'ADMIN_EMAILS'
     middleware_key = 'MIDDLEWARES'
     signal_key = 'SIGNALS'
     service_name_key = 'SERVICE_NAME'
@@ -61,6 +58,7 @@ class ConfigHandler:
     tcp_port_key = "TCP_PORT"
     database_key = 'DATABASE_SETTINGS'
     ronin_key = "RONIN"
+    smtp_key = 'SMTP_SETTINGS'
 
     # service_path_key = "SERVICE_PATH"
 
@@ -100,6 +98,7 @@ class ConfigHandler:
         tcp_service.clients = http_service.clients
         host.attach_service(http_service)
         host.attach_service(tcp_service)
+        host._smtp_handler = self.get_smtp_logging_handler()
 
     def get_database_settings(self):
         return self.settings[self.database_key]
@@ -129,17 +128,24 @@ class ConfigHandler:
             pass
 
     def get_smtp_logging_handler(self):
-        handler = BufferingSMTPHandler(mailhost=self.settings[self.log_stmp_host],
-                                       mailport=self.settings[self.log_stmp_port],
-                                       fromaddr=self.settings[self.log_stmp_email],
-                                       toaddrs=self.settings[self.error_email_receivers],
-                                       subject='Exception At %s:%s'%(self.settings[self.service_name_key],
-                                                                    self.settings[self.service_version_key]),
-                                       capacity=1,
-                                       password=self.settings[self.log_stmp_password])
-        handler.setLevel(logging.ERROR)
-        if not self.settings[self.ronin_key]:
-            return handler
+        if self.settings.get(self.smtp_key):
+            keys = ["smtp_host", "smtp_port", "smtp_user", "smtp_password"]
+            setting_keys = self.settings[self.smtp_key].keys()
+            missing_keys = list(filter(lambda x: x not in setting_keys, keys))
+            if not missing_keys:
+                handler = BufferingSMTPHandler(mailhost=self.settings[self.smtp_key]['smtp_host'],
+                                               mailport=self.settings[self.smtp_key]['smtp_port'],
+                                               fromaddr=self.settings[self.smtp_key]['smtp_user'],
+                                               toaddrs=self.settings[self.admin_emails],
+                                               subject='Error {} {}:{}'.format(self.settings[self.host_name],
+                                                                               self.settings[
+                                                                                   self.service_name_key].upper(),
+                                                                               self.settings[self.service_version_key]),
+                                               capacity=1,
+                                               password=self.settings[self.smtp_key]['smtp_password'])
+                handler.setLevel(logging.ERROR)
+                if not self.settings[self.ronin_key]:
+                    return handler
 
     def get_http_service(self):
         from trellio.services import HTTPService
