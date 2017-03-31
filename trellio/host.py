@@ -249,9 +249,9 @@ class Host:
         setup_logging(identifier)
         try:
             logger = logging.getLogger()
-            logger.addHandler(cls.__smpt_handler)
-        except:
-            pass
+            logger.addHandler(cls._smpt_handler)
+        except Exception as e:
+            print(e, 'cant setup smtp handler')
         Stats.service_name = service.name
         Aggregator._service_name = service.name
         Aggregator.periodic_aggregated_stats_logger()
