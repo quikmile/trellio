@@ -20,7 +20,7 @@ class BufferingSMTPHandler(logging.handlers.BufferingHandler):
         self.smtp.login(fromaddr, password)
 
     def handleError(self, record):
-        logger.error(record)  # overriding original and not doing anything
+        print(record)  # overriding original and not doing anything
 
     def flush(self):
         if len(self.buffer) > 0:
