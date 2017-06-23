@@ -80,12 +80,18 @@ class ConfigHandler:
         http_clients = HTTPServiceClient.__subclasses__()
         return http_clients
 
+    def get_subscribers(self):
+        from trellio.pubsub import Subscriber
+        return Subscriber.__subclasses__()
+
     def setup_host(self):
         host = self.host
         http_service = self.get_http_service()
         tcp_service = self.get_tcp_service()
         tcp_clients = self.get_tcp_clients()
         http_clients = self.get_http_clients()
+        publisher = self.get_publisher()
+        subscribers = self.get_subscribers()
         self.enable_middlewares(http_service)
         self.enable_signals()
         host.registry_host = self.settings[self.reg_host_key]
@@ -98,6 +104,8 @@ class ConfigHandler:
         tcp_service.clients = http_service.clients
         host.attach_service(http_service)
         host.attach_service(tcp_service)
+        host.attach_publisher(publisher)
+        host.attach_subscribers(subscribers)
         host._smtp_handler = self.get_smtp_logging_handler()
 
     def get_database_settings(self):
@@ -164,6 +172,15 @@ class ConfigHandler:
                                         self.settings[self.tcp_host_key],
                                         self.settings[self.tcp_port_key])
         return tcp_service
+
+    def get_publisher(self):
+        from trellio.pubsub import Publisher
+        publisher_sub_class = Publisher.__subclasses__()[0]
+        publisher = publisher_sub_class(self.settings[self.service_name_key],
+                                        self.settings[self.service_version_key],
+                                        self.settings[self.redis_host_key],
+                                        self.settings[self.redis_port_key])
+        return publisher
 
     def import_class_from_path(self, path):
         broken = path.split('.')

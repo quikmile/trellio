@@ -537,7 +537,7 @@ class _ServiceHost(_Service):
     def initiate(self):
         self.tcp_bus.register()
         yield from self.pubsub_bus.create_pubsub_handler()
-        async(self.pubsub_bus.register_for_subscription(self.host, self.port, self.node_id, self.clients))
+        # async(self.pubsub_bus.register_for_subscription(self.host, self.port, self.node_id, self.clients))
 
 
 class TCPService(_ServiceHost):

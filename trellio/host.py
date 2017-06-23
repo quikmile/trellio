@@ -16,6 +16,8 @@ from .utils.decorators import deprecated
 from .utils.log import setup_logging
 from .utils.stats import Stats, Aggregator
 
+from .pubsub import Publisher, Subscriber
+
 
 class Host:
     """Serves as a static entry point and provides the boilerplate required to host and run a trellio Service.
@@ -37,6 +39,8 @@ class Host:
     _host_id = None
     _tcp_service = None
     _http_service = None
+    _publisher = None
+    _subscribers = []
     _logger = logging.getLogger(__name__)
     _smtp_handler = None
 
@@ -111,6 +115,21 @@ class Host:
             warnings.warn('TCP service is already attached')
 
     @classmethod
+    def attach_publisher(cls, publisher: Publisher):
+        if cls._publisher is None:
+            cls._publisher = publisher
+        else:
+            warnings.warn('Publisher is already attached')
+
+    @classmethod
+    def attach_subscribers(cls, subscribers: list):
+        if all([isinstance(subscriber, Subscriber) for subscriber in subscribers]):
+            if cls._subscribers is None:
+                cls._subscribers = subscribers
+            else:
+                warnings.warn('Subscribers are already attached')
+
+    @classmethod
     def run(cls):
         """ Fires up the event loop and starts serving attached services
         """
@@ -120,6 +139,7 @@ class Host:
             cls._set_process_name()
             cls._set_signal_handlers()
             cls._start_server()
+            cls._start_pubsub()
         else:
             cls._logger.error('No services to host')
 
@@ -210,24 +230,14 @@ class Host:
             asyncio.get_event_loop().close()
 
     @classmethod
-    def _create_pubsub_handler(cls):
+    def _start_pubsub(cls):
         if not cls.ronin:
-            if cls._tcp_service:
-                asyncio.get_event_loop().run_until_complete(
-                    cls._tcp_service.pubsub_bus
-                        .create_pubsub_handler(cls.pubsub_host, cls.pubsub_port))
-            if cls._http_service:
-                asyncio.get_event_loop().run_until_complete(
-                    cls._http_service.pubsub_bus.create_pubsub_handler(cls.pubsub_host, cls.pubsub_port))
+            if cls._publisher:
+                cls._publisher.create_pubsub_handler()
 
-    @classmethod
-    def _subscribe(cls):
-        if not cls.ronin:
-            if cls._tcp_service:
-                asyncio.ensure_future(
-                    cls._tcp_service.pubsub_bus.register_for_subscription(cls._tcp_service.host, cls._tcp_service.port,
-                                                                          cls._tcp_service.node_id,
-                                                                          cls._tcp_service.clients))
+        for subscriber in cls._subscribers:
+            subscriber.create_pubsub_handler()
+            subscriber.register_for_subscription()
 
     @classmethod
     def _set_bus(cls, service):
