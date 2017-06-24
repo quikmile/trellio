@@ -218,9 +218,9 @@ class TCPBus:
 
     def handle_connected(self):
         if self.tcp_host:
-            yield from self.tcp_host.initiate()
+            self.tcp_host.initiate()
         if self.http_host:
-            yield from self.http_host.initiate()
+            self.http_host.initiate()
 
 # class PubSubBus:
 #     PUBSUB_DELAY = 5

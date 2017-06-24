@@ -81,7 +81,7 @@ class RegistryClient:
         self._transport, self._protocol = yield from self._loop.create_connection(partial(get_trellio_protocol, self),
                                                                                   self._host, self._port,
                                                                                   ssl=self._ssl_context)
-        yield from self.conn_handler.handle_connected()
+        self.conn_handler.handle_connected()
         self._pinger = TCPPinger(self._host, self._port, 'registry', self._protocol, self)
         self._pinger.ping(payload=self._node_ids)
         return self._transport, self._protocol
