@@ -506,13 +506,13 @@ class _ServiceHost(_Service):
                 client._http_bus = self._http_bus
         self._http_bus = bus
 
-    @property
-    def pubsub_bus(self):
-        return self._pubsub_bus
-
-    @pubsub_bus.setter
-    def pubsub_bus(self, bus):
-        self._pubsub_bus = bus
+    # @property
+    # def pubsub_bus(self):
+    #     return self._pubsub_bus
+    #
+    # @pubsub_bus.setter
+    # def pubsub_bus(self, bus):
+    #     self._pubsub_bus = bus
 
     @property
     def clients(self):

@@ -7,7 +7,7 @@ from functools import partial
 
 from aiohttp.web import Application
 
-from .bus import TCPBus, PubSubBus
+from .bus import TCPBus
 from .protocol_factory import get_trellio_protocol
 from .registry_client import RegistryClient
 from .services import HTTPService, TCPService
@@ -244,14 +244,14 @@ class Host:
         registry_client = RegistryClient(asyncio.get_event_loop(), cls.registry_host, cls.registry_port)
         tcp_bus = TCPBus(registry_client)
         registry_client.conn_handler = tcp_bus
-        pubsub_bus = PubSubBus(cls.pubsub_host, cls.pubsub_port, registry_client)  # , cls._tcp_service._ssl_context)
+        # pubsub_bus = PubSubBus(cls.pubsub_host, cls.pubsub_port, registry_client)  # , cls._tcp_service._ssl_context)
         registry_client.bus = tcp_bus
         if isinstance(service, TCPService):
             tcp_bus.tcp_host = service
         if isinstance(service, HTTPService):
             tcp_bus.http_host = service
         service.tcp_bus = tcp_bus
-        service.pubsub_bus = pubsub_bus
+        # service.pubsub_bus = pubsub_bus
 
     @classmethod
     def _setup_logging(cls):

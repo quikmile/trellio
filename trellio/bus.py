@@ -1,10 +1,6 @@
 import asyncio
-import json
 import logging
-import random
-import uuid
 from asyncio.coroutines import coroutine
-from collections import defaultdict
 from functools import partial
 
 import aiohttp
@@ -14,9 +10,7 @@ from retrial.retrial import retry
 from .exceptions import ClientNotFoundError, ClientDisconnected
 from .packet import ControlPacket, MessagePacket
 from .protocol_factory import get_trellio_protocol
-from .pubsub import PubSub
 from .services import TCPServiceClient, HTTPServiceClient
-from .utils.jsonencoder import TrellioEncoder
 
 HTTP = 'http'
 TCP = 'tcp'
@@ -228,80 +222,79 @@ class TCPBus:
         if self.http_host:
             yield from self.http_host.initiate()
 
-
-class PubSubBus:
-    PUBSUB_DELAY = 5
-
-    def __init__(self, pubsub_host, pubsub_port, registry_client, ssl_context=None):
-        self._host = pubsub_host
-        self._port = pubsub_port
-        self._pubsub_handler = None
-        self._registry_client = registry_client
-        self._clients = None
-        self._pending_publishes = {}
-        self._ssl_context = ssl_context
-
-    def create_pubsub_handler(self):
-        self._pubsub_handler = PubSub(self._host, self._port)
-        yield from self._pubsub_handler.connect()
-
-    def register_for_subscription(self, host, port, node_id, clients):
-        self._clients = clients
-        subscription_list = []
-        xsubscription_list = []
-        for client in clients:
-            if isinstance(client, TCPServiceClient):
-                for each in dir(client):
-                    fn = getattr(client, each)
-                    if callable(fn) and getattr(fn, 'is_subscribe', False):
-                        subscription_list.append(self._get_pubsub_key(client.name, client.version, fn.__name__))
-                    elif callable(fn) and getattr(fn, 'is_xsubscribe', False):
-                        xsubscription_list.append((client.name, client.version, fn.__name__, getattr(fn, 'strategy')))
-        self._registry_client.x_subscribe(host, port, node_id, xsubscription_list)
-        yield from self._pubsub_handler.subscribe(subscription_list, handler=self.subscription_handler)
-
-    def publish(self, service, version, endpoint, payload):
-        endpoint_key = self._get_pubsub_key(service, version, endpoint)
-        asyncio.async(self._pubsub_handler.publish(endpoint_key, json.dumps(payload, cls=TrellioEncoder)))
-        asyncio.async(self.xpublish(service, version, endpoint, payload))
-
-    def xpublish(self, service, version, endpoint, payload):
-        subscribers = yield from self._registry_client.get_subscribers(service, version, endpoint)
-        strategies = defaultdict(list)
-        for subscriber in subscribers:
-            strategies[(subscriber['name'], subscriber['version'])].append(
-                (subscriber['host'], subscriber['port'], subscriber['node_id'], subscriber['strategy']))
-        for key, value in strategies.items():
-            publish_id = str(uuid.uuid4())
-            future = asyncio.async(
-                self._connect_and_publish(publish_id, service, version, endpoint, value, payload))
-            self._pending_publishes[publish_id] = future
-
-    def receive(self, packet, transport, protocol):
-        if packet['type'] == 'ack':
-            future = self._pending_publishes.pop(packet['request_id'], None)
-            if future:
-                future.cancel()
-                transport.close()
-
-    def subscription_handler(self, endpoint, payload):
-        service, version, endpoint = endpoint.split('/')
-        client = [sc for sc in self._clients if (sc.name == service and sc.version == version)][0]
-        func = getattr(client, endpoint)
-        asyncio.async(func(**json.loads(payload)))
-
-    @staticmethod
-    def _get_pubsub_key(service, version, endpoint):
-        return '/'.join((service, str(version), endpoint))
-
-    def _connect_and_publish(self, publish_id, service, version, endpoint, subscribers, payload):
-        if subscribers[0][3] == 'LEADER':
-            host, port = subscribers[0][0], subscribers[0][1]
-        else:
-            random_metadata = random.choice(subscribers)
-            host, port = random_metadata[0], random_metadata[1]
-        transport, protocol = yield from asyncio.get_event_loop().create_connection(
-            partial(get_trellio_protocol, self), host, port)
-        packet = MessagePacket.publish(publish_id, service, version, endpoint, payload)
-        protocol.send(packet)
-        yield from asyncio.sleep(self.PUBSUB_DELAY)
+# class PubSubBus:
+#     PUBSUB_DELAY = 5
+#
+#     def __init__(self, pubsub_host, pubsub_port, registry_client, ssl_context=None):
+#         self._host = pubsub_host
+#         self._port = pubsub_port
+#         self._pubsub_handler = None
+#         self._registry_client = registry_client
+#         self._clients = None
+#         self._pending_publishes = {}
+#         self._ssl_context = ssl_context
+#
+#     def create_pubsub_handler(self):
+#         self._pubsub_handler = PubSub(self._host, self._port)
+#         yield from self._pubsub_handler.connect()
+#
+#     def register_for_subscription(self, host, port, node_id, clients):
+#         self._clients = clients
+#         subscription_list = []
+#         xsubscription_list = []
+#         for client in clients:
+#             if isinstance(client, TCPServiceClient):
+#                 for each in dir(client):
+#                     fn = getattr(client, each)
+#                     if callable(fn) and getattr(fn, 'is_subscribe', False):
+#                         subscription_list.append(self._get_pubsub_key(client.name, client.version, fn.__name__))
+#                     elif callable(fn) and getattr(fn, 'is_xsubscribe', False):
+#                         xsubscription_list.append((client.name, client.version, fn.__name__, getattr(fn, 'strategy')))
+#         self._registry_client.x_subscribe(host, port, node_id, xsubscription_list)
+#         yield from self._pubsub_handler.subscribe(subscription_list, handler=self.subscription_handler)
+#
+#     def publish(self, service, version, endpoint, payload):
+#         endpoint_key = self._get_pubsub_key(service, version, endpoint)
+#         asyncio.async(self._pubsub_handler.publish(endpoint_key, json.dumps(payload, cls=TrellioEncoder)))
+#         asyncio.async(self.xpublish(service, version, endpoint, payload))
+#
+#     def xpublish(self, service, version, endpoint, payload):
+#         subscribers = yield from self._registry_client.get_subscribers(service, version, endpoint)
+#         strategies = defaultdict(list)
+#         for subscriber in subscribers:
+#             strategies[(subscriber['name'], subscriber['version'])].append(
+#                 (subscriber['host'], subscriber['port'], subscriber['node_id'], subscriber['strategy']))
+#         for key, value in strategies.items():
+#             publish_id = str(uuid.uuid4())
+#             future = asyncio.async(
+#                 self._connect_and_publish(publish_id, service, version, endpoint, value, payload))
+#             self._pending_publishes[publish_id] = future
+#
+#     def receive(self, packet, transport, protocol):
+#         if packet['type'] == 'ack':
+#             future = self._pending_publishes.pop(packet['request_id'], None)
+#             if future:
+#                 future.cancel()
+#                 transport.close()
+#
+#     def subscription_handler(self, endpoint, payload):
+#         service, version, endpoint = endpoint.split('/')
+#         client = [sc for sc in self._clients if (sc.name == service and sc.version == version)][0]
+#         func = getattr(client, endpoint)
+#         asyncio.async(func(**json.loads(payload)))
+#
+#     @staticmethod
+#     def _get_pubsub_key(service, version, endpoint):
+#         return '/'.join((service, str(version), endpoint))
+#
+#     def _connect_and_publish(self, publish_id, service, version, endpoint, subscribers, payload):
+#         if subscribers[0][3] == 'LEADER':
+#             host, port = subscribers[0][0], subscribers[0][1]
+#         else:
+#             random_metadata = random.choice(subscribers)
+#             host, port = random_metadata[0], random_metadata[1]
+#         transport, protocol = yield from asyncio.get_event_loop().create_connection(
+#             partial(get_trellio_protocol, self), host, port)
+#         packet = MessagePacket.publish(publish_id, service, version, endpoint, payload)
+#         protocol.send(packet)
+#         yield from asyncio.sleep(self.PUBSUB_DELAY)
