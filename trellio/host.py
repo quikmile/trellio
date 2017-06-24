@@ -9,14 +9,13 @@ from aiohttp.web import Application
 
 from .bus import TCPBus
 from .protocol_factory import get_trellio_protocol
+from .pubsub import Publisher, Subscriber
 from .registry_client import RegistryClient
 from .services import HTTPService, TCPService
 from .signals import ServiceReady
 from .utils.decorators import deprecated
 from .utils.log import setup_logging
 from .utils.stats import Stats, Aggregator
-
-from .pubsub import Publisher, Subscriber
 
 
 class Host:
@@ -75,6 +74,14 @@ class Host:
         tcp_service = cls.get_tcp_service()
         if tcp_service:
             return tcp_service.clients
+
+    @classmethod
+    def get_publisher(cls):
+        return cls._publisher
+
+    @classmethod
+    def get_subscribers(cls):
+        return cls._subscribers
 
     @classmethod
     @deprecated
