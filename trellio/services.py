@@ -549,11 +549,11 @@ class TCPService(_ServiceHost):
     def ssl_context(self):
         return self._ssl_context
 
-    def _publish(self, endpoint, payload):
-        self._pubsub_bus.publish(self.name, self.version, endpoint, payload)
-
-    def _xpublish(self, endpoint, payload, strategy):
-        self._pubsub_bus.xpublish(self.name, self.version, endpoint, payload, strategy)
+    # def _publish(self, endpoint, payload):
+    #     self._pubsub_bus.publish(self.name, self.version, endpoint, payload)
+    #
+    # def _xpublish(self, endpoint, payload, strategy):
+    #     self._pubsub_bus.xpublish(self.name, self.version, endpoint, payload, strategy)
 
     @staticmethod
     def _make_response_packet(request_id: str, from_id: str, entity: str, result: object, error: object,
