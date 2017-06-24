@@ -86,12 +86,14 @@ class ConfigHandler:
 
     def setup_host(self):
         host = self.host
+
         http_service = self.get_http_service()
         tcp_service = self.get_tcp_service()
         tcp_clients = self.get_tcp_clients()
         http_clients = self.get_http_clients()
         publisher = self.get_publisher()
         subscribers = self.get_subscribers()
+
         self.enable_middlewares(http_service)
         self.enable_signals()
         host.registry_host = self.settings[self.reg_host_key]
@@ -102,10 +104,16 @@ class ConfigHandler:
         host.name = self.settings[self.host_name]
         http_service.clients = [i() for i in http_clients + tcp_clients]
         tcp_service.clients = http_service.clients
-        host.attach_service(http_service)
-        host.attach_service(tcp_service)
-        host.attach_publisher(publisher)
-        host.attach_subscribers(subscribers)
+
+        if http_service:
+            host.attach_service(http_service)
+        if tcp_service:
+            host.attach_service(tcp_service)
+        if publisher:
+            host.attach_publisher(publisher)
+        if subscribers:
+            host.attach_subscribers(subscribers)
+
         host._smtp_handler = self.get_smtp_logging_handler()
 
     def get_database_settings(self):
@@ -157,29 +165,35 @@ class ConfigHandler:
 
     def get_http_service(self):
         from trellio.services import HTTPService
-        service_sub_class = HTTPService.__subclasses__()[0]
-        http_service = service_sub_class(self.settings[self.service_name_key],
-                                         self.settings[self.service_version_key],
-                                         self.settings[self.http_host_key],
-                                         self.settings[self.http_port_key])
+        http_service = None
+        if HTTPService.__subclasses__():
+            service_sub_class = HTTPService.__subclasses__()[0]
+            http_service = service_sub_class(self.settings[self.service_name_key],
+                                             self.settings[self.service_version_key],
+                                             self.settings[self.http_host_key],
+                                             self.settings[self.http_port_key])
         return http_service
 
     def get_tcp_service(self):
         from trellio.services import TCPService
-        service_sub_class = TCPService.__subclasses__()[0]
-        tcp_service = service_sub_class(self.settings[self.service_name_key],
-                                        self.settings[self.service_version_key],
-                                        self.settings[self.tcp_host_key],
-                                        self.settings[self.tcp_port_key])
+        tcp_service = None
+        if TCPService.__subclasses__():
+            service_sub_class = TCPService.__subclasses__()[0]
+            tcp_service = service_sub_class(self.settings[self.service_name_key],
+                                            self.settings[self.service_version_key],
+                                            self.settings[self.tcp_host_key],
+                                            self.settings[self.tcp_port_key])
         return tcp_service
 
     def get_publisher(self):
         from trellio.pubsub import Publisher
-        publisher_sub_class = Publisher.__subclasses__()[0]
-        publisher = publisher_sub_class(self.settings[self.service_name_key],
-                                        self.settings[self.service_version_key],
-                                        self.settings[self.redis_host_key],
-                                        self.settings[self.redis_port_key])
+        publisher = None
+        if Publisher.__subclasses__():
+            publisher_sub_class = Publisher.__subclasses__()[0]
+            publisher = publisher_sub_class(self.settings[self.service_name_key],
+                                            self.settings[self.service_version_key],
+                                            self.settings[self.redis_host_key],
+                                            self.settings[self.redis_port_key])
         return publisher
 
     def import_class_from_path(self, path):
