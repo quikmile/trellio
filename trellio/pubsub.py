@@ -74,7 +74,7 @@ class PubSub:
 
 
 class Publisher:
-    def __init__(self, service_name, service_version, pubsub_host=None, pubsub_port=None):
+    def __init__(self, service_name=None, service_version=None, pubsub_host=None, pubsub_port=None):
         self._service_name = service_name
         self._service_version = service_version
         self._host = pubsub_host
