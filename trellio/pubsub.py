@@ -99,7 +99,7 @@ class Publisher:
 
     def create_pubsub_handler(self):
         self._pubsub_handler = PubSub(self._host, self._port)
-        yield from self._pubsub_handler.connect()
+        asyncio.async(self._pubsub_handler.connect())
 
     def _publish(self, endpoint, payload):
         channel = self._get_pubsub_channel(endpoint)
@@ -127,7 +127,7 @@ class Subscriber:
 
     def create_pubsub_handler(self):
         self._pubsub_handler = PubSub(self._host, self._port)
-        yield from self._pubsub_handler.connect()
+        asyncio.async(self._pubsub_handler.connect())
 
     def _get_pubsub_channel(self, endpoint):
         return '/'.join((self.service_name, str(self.service_version), endpoint))
