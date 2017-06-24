@@ -176,10 +176,10 @@ class ConfigHandler:
     def get_publisher(self):
         from trellio.pubsub import Publisher
         publisher_sub_class = Publisher.__subclasses__()[0]
-        publisher = publisher_sub_class(service_name=self.settings[self.service_name_key],
-                                        service_version=self.settings[self.service_version_key],
-                                        pubsub_host=self.settings[self.redis_host_key],
-                                        pubsub_port=self.settings[self.redis_port_key])
+        publisher = publisher_sub_class(self.settings[self.service_name_key],
+                                        self.settings[self.service_version_key],
+                                        self.settings[self.redis_host_key],
+                                        self.settings[self.redis_port_key])
         return publisher
 
     def import_class_from_path(self, path):
