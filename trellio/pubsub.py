@@ -1,14 +1,11 @@
 import asyncio
+import json
 import logging
 
 import asyncio_redis as redis
 
+from .utils.helpers import Borg
 from .utils.jsonencoder import TrellioEncoder
-
-try:
-    import ujson as json
-except:
-    import json
 
 
 class PubSub:
@@ -73,8 +70,9 @@ class PubSub:
         return await redis.Connection.create(self._redis_host, self._redis_port, auto_reconnect=True)
 
 
-class Publisher:
+class Publisher(Borg):
     def __init__(self, service_name, service_version, pubsub_host, pubsub_port):
+        super(Publisher, self).__init__()
         self._service_name = service_name
         self._service_version = service_version
         self._host = pubsub_host
@@ -89,17 +87,9 @@ class Publisher:
     def service_version(self):
         return self._service_version
 
-    @property
-    def pubsub_bus(self):
-        return self._pubsub_bus
-
-    @pubsub_bus.setter
-    def pubsub_bus(self, bus):
-        self._pubsub_bus = bus
-
-    def create_pubsub_handler(self):
+    async def create_pubsub_handler(self):
         self._pubsub_handler = PubSub(self._host, self._port)
-        asyncio.async(self._pubsub_handler.connect())
+        await self._pubsub_handler.connect()
 
     def _publish(self, endpoint, payload):
         channel = self._get_pubsub_channel(endpoint)
@@ -113,8 +103,8 @@ class Subscriber:
     def __init__(self, service_name, service_version, pubsub_host=None, pubsub_port=None):
         self._service_name = service_name
         self._service_version = service_version
-        self._host = pubsub_host
-        self._port = pubsub_port
+        self._pubsub_host = pubsub_host
+        self._pubsub_port = pubsub_port
         self._pubsub_handler = None
 
     @property
@@ -125,21 +115,38 @@ class Subscriber:
     def service_version(self):
         return self._service_version
 
-    def create_pubsub_handler(self):
-        self._pubsub_handler = PubSub(self._host, self._port)
-        asyncio.async(self._pubsub_handler.connect())
+    @property
+    def pubsub_host(self):
+        return self._pubsub_host
+
+    @pubsub_host.setter
+    def pubsub_host(self, pubsub_host):
+        self._pubsub_host = pubsub_host
+
+    @property
+    def pubsub_port(self):
+        return self._pubsub_port
+
+    @pubsub_port.setter
+    def pubsub_port(self, pubsub_port):
+        self._pubsub_port = pubsub_port
+
+    async def create_pubsub_handler(self):
+        self._pubsub_handler = PubSub(self.pubsub_host, self.pubsub_port)
+        await self._pubsub_handler.connect()
 
     def _get_pubsub_channel(self, endpoint):
         return '/'.join((self.service_name, str(self.service_version), endpoint))
 
-    def register_for_subscription(self):
+    async def register_for_subscription(self):
         subscription_list = []
         for each in dir(self.__class__):
             fn = getattr(self.__class__, each)
             if callable(fn) and getattr(fn, 'is_subscribe', False):
                 subscription_list.append(self._get_pubsub_channel(fn.__name__))
-        asyncio.async(self._pubsub_handler.subscribe(subscription_list, handler=self.subscription_handler))
+        await self._pubsub_handler.subscribe(subscription_list, handler=self.subscription_handler)
 
-    def subscription_handler(self, endpoint, payload):
-        func = getattr(self.__class__, endpoint)
+    def subscription_handler(self, channel, payload):
+        service, version, endpoint = channel.split('/')
+        func = getattr(self, endpoint)
         asyncio.async(func(**json.loads(payload)))

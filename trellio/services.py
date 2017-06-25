@@ -70,7 +70,7 @@ def _get_subscribe_decorator(func):
         coroutine_func = func
         if not iscoroutine(func):
             coroutine_func = coroutine(func)
-        return (yield from coroutine_func(*args, **kwargs))
+        return (async(coroutine_func(*args, **kwargs)))
 
     return wrapper
 

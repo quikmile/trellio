@@ -131,7 +131,7 @@ class Host:
     @classmethod
     def attach_subscribers(cls, subscribers: list):
         if all([isinstance(subscriber, Subscriber) for subscriber in subscribers]):
-            if cls._subscribers is None:
+            if not cls._subscribers:
                 cls._subscribers = subscribers
             else:
                 warnings.warn('Subscribers are already attached')
@@ -145,8 +145,8 @@ class Host:
             cls._setup_logging()
             cls._set_process_name()
             cls._set_signal_handlers()
-            cls._start_server()
             cls._start_pubsub()
+            cls._start_server()
         else:
             cls._logger.error('No services to host')
 
@@ -240,11 +240,11 @@ class Host:
     def _start_pubsub(cls):
         if not cls.ronin:
             if cls._publisher:
-                cls._publisher.create_pubsub_handler()
+                asyncio.get_event_loop().run_until_complete(cls._publisher.create_pubsub_handler())
 
         for subscriber in cls._subscribers:
-            subscriber.create_pubsub_handler()
-            subscriber.register_for_subscription()
+            asyncio.get_event_loop().run_until_complete(subscriber.create_pubsub_handler())
+            asyncio.async(subscriber.register_for_subscription())
 
     @classmethod
     def _set_bus(cls, service):

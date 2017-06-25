@@ -82,7 +82,14 @@ class ConfigHandler:
 
     def get_subscribers(self):
         from trellio.pubsub import Subscriber
-        return Subscriber.__subclasses__()
+        subscriber_classes = Subscriber.__subclasses__()
+        subscribers = []
+        for subs in subscriber_classes:
+            s = subs()
+            s.pubsub_host = self.settings[self.redis_host_key]
+            s.pubsub_port = self.settings[self.redis_port_key]
+            subscribers.append(s)
+        return subscribers
 
     def setup_host(self):
         host = self.host
