@@ -3,7 +3,9 @@ import importlib
 import json
 import logging
 import os
+from types import MethodType
 
+from ..exceptions import AlreadyRegistered
 from ..utils.log_handlers import BufferingSMTPHandler
 
 GLOBAL_CONFIG = {
@@ -94,14 +96,18 @@ class ConfigHandler:
     def setup_host(self):
         host = self.host
 
+        publisher = self.get_publisher()
+        subscribers = self.get_subscribers()
+        if publisher:
+            host.attach_publisher(publisher)
+        if subscribers:
+            host.attach_subscribers(subscribers)
+
         http_service = self.get_http_service()
         tcp_service = self.get_tcp_service()
         tcp_clients = self.get_tcp_clients()
         http_clients = self.get_http_clients()
-        publisher = self.get_publisher()
-        subscribers = self.get_subscribers()
 
-        self.enable_middlewares(http_service)
         self.enable_signals()
         host.registry_host = self.settings[self.reg_host_key]
         host.registry_port = self.settings[self.reg_port_key]
@@ -109,17 +115,18 @@ class ConfigHandler:
         host.pubsub_port = self.settings[self.redis_port_key]
         host.ronin = self.settings[self.ronin_key]
         host.name = self.settings[self.host_name]
-        http_service.clients = [i() for i in http_clients + tcp_clients]
-        tcp_service.clients = http_service.clients
 
         if http_service:
+            self.register_http_views(http_service)
+            self.enable_middlewares(http_service)
             host.attach_service(http_service)
+            http_service.clients = [i() for i in http_clients + tcp_clients]
+
         if tcp_service:
+            self.register_tcp_views(tcp_service)
             host.attach_service(tcp_service)
-        if publisher:
-            host.attach_publisher(publisher)
-        if subscribers:
-            host.attach_subscribers(subscribers)
+            if http_service:
+                tcp_service.clients = http_service.clients
 
         host._smtp_handler = self.get_smtp_logging_handler()
 
@@ -175,6 +182,7 @@ class ConfigHandler:
         http_service = None
         if HTTPService.__subclasses__():
             service_sub_class = HTTPService.__subclasses__()[0]
+
             http_service = service_sub_class(self.settings[self.service_name_key],
                                              self.settings[self.service_version_key],
                                              self.settings[self.http_host_key],
@@ -202,6 +210,31 @@ class ConfigHandler:
                                             self.settings[self.redis_host_key],
                                             self.settings[self.redis_port_key])
         return publisher
+
+    def register_http_views(self, http_service):
+        if http_service:
+            from trellio.views import BaseHTTPView
+            http_classes = BaseHTTPView.__subclasses__()
+            for cls in http_classes:
+                for fn_name, fn in cls.__dict__.items():
+                    if not fn_name.startswith('__') and callable(fn) and getattr(fn, 'is_http_method', False):
+                        if getattr(http_service, fn_name, False):
+                            raise AlreadyRegistered("'{}' view is already registered with {}".format(fn_name,
+                                                                                                     http_service.__class__.__name__))
+                        http_service.__setattr__(fn_name, MethodType(fn, http_service))
+                        http_service.__ordered__.append(fn_name)
+
+    def register_tcp_views(self, tcp_service):
+        if tcp_service:
+            tcp_classes = tcp_service.__subclasses__()
+            for cls in tcp_classes:
+                for fn_name, fn in cls.__dict__.items():
+                    if not fn_name.startswith('__') and callable(fn) and getattr(fn, 'is_api', False):
+                        if getattr(tcp_service, fn_name, False):
+                            raise AlreadyRegistered("'{}' view is already registered with {}".format(fn_name,
+                                                                                                     tcp_service.__class__.__name__))
+                        tcp_service.__setattr__(fn_name, MethodType(fn, tcp_service))
+                        tcp_service.__ordered__.append(fn_name)
 
     def import_class_from_path(self, path):
         broken = path.split('.')

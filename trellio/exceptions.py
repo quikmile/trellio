@@ -33,3 +33,7 @@ class ClientNotFoundError(ClientException):
 
 class ClientDisconnected(ClientException):
     pass
+
+
+class AlreadyRegistered(Exception):
+    pass
