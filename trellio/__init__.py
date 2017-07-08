@@ -18,4 +18,4 @@ from .utils.log import setup_logging  # noqa
 from .views import BaseHTTPView, BaseTCPView
 from .wrappers import Response, Request  # noqa
 
-__version__ = '1.1.27'
+__version__ = '1.1.28'

@@ -226,7 +226,8 @@ class ConfigHandler:
 
     def register_tcp_views(self, tcp_service):
         if tcp_service:
-            tcp_classes = tcp_service.__subclasses__()
+            from trellio.views import BaseTCPView
+            tcp_classes = BaseTCPView.__subclasses__()
             for cls in tcp_classes:
                 for fn_name, fn in cls.__dict__.items():
                     if not fn_name.startswith('__') and callable(fn) and getattr(fn, 'is_api', False):
