@@ -3,9 +3,7 @@ import importlib
 import json
 import logging
 import os
-from types import MethodType
 
-from ..exceptions import AlreadyRegistered
 from ..utils.log_handlers import BufferingSMTPHandler
 
 GLOBAL_CONFIG = {
@@ -23,7 +21,8 @@ GLOBAL_CONFIG = {
     "HTTP_PORT": "",
     "TCP_PORT": "",
     "SIGNALS": {},
-    "MIDDLEWARES": {},
+    "MIDDLEWARES": [],
+    "APPS": [],
     "DATABASE_SETTINGS": {
         "database": "",
         "user": "",
@@ -61,6 +60,7 @@ class ConfigHandler:
     database_key = 'DATABASE_SETTINGS'
     ronin_key = "RONIN"
     smtp_key = 'SMTP_SETTINGS'
+    apps_key = 'APPS'
 
     # service_path_key = "SERVICE_PATH"
 
@@ -107,6 +107,8 @@ class ConfigHandler:
         tcp_service = self.get_tcp_service()
         tcp_clients = self.get_tcp_clients()
         http_clients = self.get_http_clients()
+        http_views = self.get_http_views()
+        tcp_views = self.get_tcp_views()
 
         self.enable_signals()
         host.registry_host = self.settings[self.reg_host_key]
@@ -115,18 +117,24 @@ class ConfigHandler:
         host.pubsub_port = self.settings[self.redis_port_key]
         host.ronin = self.settings[self.ronin_key]
         host.name = self.settings[self.host_name]
+        self.enable_middlewares(http_service=http_service, http_views=http_views)
 
         if http_service:
-            self.register_http_views(http_service)
-            self.enable_middlewares(http_service)
+            # self.register_http_views(http_service)
             host.attach_service(http_service)
             http_service.clients = [i() for i in http_clients + tcp_clients]
 
         if tcp_service:
-            self.register_tcp_views(tcp_service)
+            # self.register_tcp_views(tcp_service)
             host.attach_service(tcp_service)
             if http_service:
                 tcp_service.clients = http_service.clients
+
+        if http_views:
+            host.attach_http_views()
+
+        if tcp_views:
+            host.attach_tcp_views()
 
         host._smtp_handler = self.get_smtp_logging_handler()
 
@@ -156,6 +164,15 @@ class ConfigHandler:
             importlib.import_module(service_path2)
         except:
             pass
+
+        if self.settings.get(self.apps_key):
+            apps = self.settings[self.apps_key]
+            for app in apps:
+                views_path = parent_dir + '.{}.views'.format(app)
+                try:
+                    importlib.import_module(views_path)
+                except:
+                    pass
 
     def get_smtp_logging_handler(self):
         if self.settings.get(self.smtp_key):
@@ -211,31 +228,13 @@ class ConfigHandler:
                                             self.settings[self.redis_port_key])
         return publisher
 
-    def register_http_views(self, http_service):
-        if http_service:
-            from trellio.views import BaseHTTPView
-            http_classes = BaseHTTPView.__subclasses__()
-            for cls in http_classes:
-                for fn_name, fn in cls.__dict__.items():
-                    if not fn_name.startswith('__') and callable(fn) and getattr(fn, 'is_http_method', False):
-                        if getattr(http_service, fn_name, False):
-                            raise AlreadyRegistered("'{}' view is already registered with {}".format(fn_name,
-                                                                                                     http_service.__class__.__name__))
-                        http_service.__setattr__(fn_name, MethodType(fn, http_service))
-                        http_service.__ordered__.append(fn_name)
+    def get_http_views(self):
+        from trellio.views import HTTPView
+        return HTTPView.__subclasses__()
 
-    def register_tcp_views(self, tcp_service):
-        if tcp_service:
-            from trellio.views import BaseTCPView
-            tcp_classes = BaseTCPView.__subclasses__()
-            for cls in tcp_classes:
-                for fn_name, fn in cls.__dict__.items():
-                    if not fn_name.startswith('__') and callable(fn) and getattr(fn, 'is_api', False):
-                        if getattr(tcp_service, fn_name, False):
-                            raise AlreadyRegistered("'{}' view is already registered with {}".format(fn_name,
-                                                                                                     tcp_service.__class__.__name__))
-                        tcp_service.__setattr__(fn_name, MethodType(fn, tcp_service))
-                        tcp_service.__ordered__.append(fn_name)
+    def get_tcp_views(self):
+        from trellio.views import TCPView
+        return TCPView.__subclasses__()
 
     def import_class_from_path(self, path):
         broken = path.split('.')
@@ -245,7 +244,7 @@ class ConfigHandler:
         class_value = getattr(module, class_name)
         return module, class_value
 
-    def enable_middlewares(self, http_service):
+    def enable_middlewares(self, http_service=None, http_views=()):
         middlewares = self.settings[self.middleware_key] or []
         middle_cls = []
         for i in middlewares:
@@ -254,7 +253,11 @@ class ConfigHandler:
                 raise InvalidConfigurationError
             else:
                 middle_cls.append(class_value())
-        http_service.http_middlewares = middle_cls
+
+        if http_service:
+            http_service.middlewares = middle_cls
+        for view in http_views:
+            view.middlewares = middle_cls
 
     def enable_signals(self):
         '''

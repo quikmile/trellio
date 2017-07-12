@@ -9,6 +9,7 @@ from functools import wraps, partial
 from again.utils import unique_hex
 from aiohttp.web import Response
 
+from .views import HTTPView
 from .exceptions import RequestException, ClientException, TrellioServiceException
 from .packet import MessagePacket
 from .utils.helpers import Singleton  # we need non singleton subclasses
@@ -209,8 +210,8 @@ def make_request(func, self, args, kwargs, method):
 def _enable_http_middleware(func):  # pre and post http, processing
     @wraps(func)
     async def f(self, *args, **kwargs):
-        if hasattr(self, 'http_middlewares'):
-            for i in self.http_middlewares:
+        if hasattr(self, 'middlewares'):
+            for i in self.middlewares:
                 if hasattr(i, 'pre_request'):
                     pre_request = getattr(i, 'pre_request')
                     if callable(pre_request):
@@ -224,8 +225,8 @@ def _enable_http_middleware(func):  # pre and post http, processing
                                                 {'error': str(e), 'sector': getattr(i, 'middleware_info')}).encode())
         _func = coroutine(func)  # func is a generator object
         result = await _func(self, *args, **kwargs)
-        if hasattr(self, 'http_middlewares'):
-            for i in self.http_middlewares:
+        if hasattr(self, 'middlewares'):
+            for i in self.middlewares:
                 if hasattr(i, 'post_request'):
                     post_request = getattr(i, 'post_request')
                     if callable(post_request):
@@ -250,7 +251,7 @@ def get_decorated_fun(method, path, required_params, timeout):
         def f(self, *args, **kwargs):
             if isinstance(self, HTTPServiceClient):
                 return (yield from make_request(func, self, args, kwargs, method))
-            elif isinstance(self, HTTPService):
+            elif isinstance(self, HTTPService) or isinstance(self, HTTPView):
                 Stats.http_stats['total_requests'] += 1
                 if required_params is not None:
                     req = args[0]

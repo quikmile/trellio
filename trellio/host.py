@@ -32,7 +32,13 @@ class Host:
     registry_port = None
     pubsub_host = None
     pubsub_port = None
-    name = None
+    host_name = None
+    service_name = None
+    http_host = None
+    http_port = None
+    tcp_host = None
+    tcp_port = None
+    ssl_context = None
     ronin = False  # If true, the trellio service runs solo without a registry
 
     _host_id = None
@@ -40,26 +46,37 @@ class Host:
     _http_service = None
     _publisher = None
     _subscribers = []
+    _tcp_views = []
+    _http_views = []
     _logger = logging.getLogger(__name__)
     _smtp_handler = None
 
     @classmethod
-    def configure(cls, name, registry_host: str = "0.0.0.0", registry_port: int = 4500,
+    def configure(cls, host_name: str = '', service_name: str = '',
+                  http_host: str = '127.0.0.1', http_port: int = 8000,
+                  tcp_host: str = '127.0.0.1', tcp_port: int = 8001, ssl_context=None,
+                  registry_host: str = "0.0.0.0", registry_port: int = 4500,
                   pubsub_host: str = "0.0.0.0", pubsub_port: int = 6379):
         """ A convenience method for providing registry and pubsub(redis) endpoints
 
-        :param name: Used for process name
+        :param host_name: Used for process name
         :param registry_host: IP Address for trellio-registry; default = 0.0.0.0
         :param registry_port: Port for trellio-registry; default = 4500
         :param pubsub_host: IP Address for pubsub component, usually redis; default = 0.0.0.0
         :param pubsub_port: Port for pubsub component; default= 6379
         :return: None
         """
-        Host.name = name
+        Host.host_name = host_name
+        Host.service_name = service_name
+        Host.http_host = http_host
+        Host.http_port = http_port
+        Host.tcp_host = tcp_host
+        Host.tcp_port = tcp_port
         Host.registry_host = registry_host
         Host.registry_port = registry_port
         Host.pubsub_host = pubsub_host
         Host.pubsub_port = pubsub_port
+        Host.ssl_context = ssl_context
 
     @classmethod
     def get_http_service(cls):
@@ -82,6 +99,14 @@ class Host:
     @classmethod
     def get_subscribers(cls):
         return cls._subscribers
+
+    @classmethod
+    def get_tcp_views(cls):
+        return cls._tcp_views
+
+    @classmethod
+    def get_http_views(cls):
+        return cls._http_views
 
     @classmethod
     @deprecated
@@ -122,6 +147,33 @@ class Host:
             warnings.warn('TCP service is already attached')
 
     @classmethod
+    def attach_tcp_view(cls, tcp_views: list):
+        views_instances = []
+        for view_class in tcp_views:
+            instance = view_class()
+            instance.host = Host
+            views_instances.append(instance)
+        cls._tcp_views.extend(views_instances)
+
+    @classmethod
+    def attach_http_views(cls, http_views: list):
+        views_instances = []
+        for view_class in http_views:
+            instance = view_class()
+            instance.host = Host
+            views_instances.append(instance)
+        cls._http_views.extend(views_instances)
+
+    @classmethod
+    def attach_tcp_views(cls, tcp_views: list):
+        views_instances = []
+        for view_class in tcp_views:
+            instance = view_class()
+            instance.host = Host
+            views_instances.append(instance)
+        cls._tcp_views.extend(views_instances)
+
+    @classmethod
     def attach_publisher(cls, publisher: Publisher):
         if cls._publisher is None:
             cls._publisher = publisher
@@ -140,7 +192,7 @@ class Host:
     def run(cls):
         """ Fires up the event loop and starts serving attached services
         """
-        if cls._tcp_service or cls._http_service:
+        if cls._tcp_service or cls._http_service or cls._http_views or cls._tcp_views:
             cls._set_host_id()
             cls._setup_logging()
             cls._set_process_name()
@@ -153,7 +205,7 @@ class Host:
     @classmethod
     def _set_process_name(cls):
         from setproctitle import setproctitle
-        setproctitle('trellio_{}_{}'.format(cls.name, cls._host_id))
+        setproctitle('trellio_{}_{}'.format(cls.host_name, cls._host_id))
 
     @classmethod
     def _stop(cls, signame: str):
@@ -177,9 +229,9 @@ class Host:
 
     @classmethod
     def _create_http_server(cls):
-        if cls._http_service:
-            host_ip, host_port = cls._http_service.socket_address
-            ssl_context = cls._http_service.ssl_context
+        if cls._http_service or cls._http_views:
+            host_ip, host_port = cls.http_host, cls.http_port
+            ssl_context = cls.ssl_context
             handler = cls._make_aiohttp_handler()
             task = asyncio.get_event_loop().create_server(handler, host_ip, host_port, ssl=ssl_context)
             return asyncio.get_event_loop().run_until_complete(task)
@@ -187,15 +239,28 @@ class Host:
     @classmethod
     def _make_aiohttp_handler(cls):
         app = Application(loop=asyncio.get_event_loop())
-        for each in cls._http_service.__ordered__:
-            # iterate all attributes in the service looking for http endpoints and add them
-            fn = getattr(cls._http_service, each)
-            if callable(fn) and getattr(fn, 'is_http_method', False):
-                for path in fn.paths:
-                    app.router.add_route(fn.method, path, fn)
-                    if cls._http_service.cross_domain_allowed:
-                        # add an 'options' for this specific path to make it CORS friendly
-                        app.router.add_route('options', path, cls._http_service.preflight_response)
+
+        if cls._http_service:
+            for each in cls._http_service.__ordered__:
+                # iterate all attributes in the service looking for http endpoints and add them
+                fn = getattr(cls._http_service, each)
+                if callable(fn) and getattr(fn, 'is_http_method', False):
+                    for path in fn.paths:
+                        app.router.add_route(fn.method, path, fn)
+                        if cls._http_service.cross_domain_allowed:
+                            # add an 'options' for this specific path to make it CORS friendly
+                            app.router.add_route('options', path, cls._http_service.preflight_response)
+
+        for view in cls._http_views:
+            for each in view.__ordered__:
+                fn = getattr(view, each)
+                if callable(fn) and getattr(fn, 'is_http_method', False):
+                    for path in fn.paths:
+                        app.router.add_route(fn.method, path, fn)
+                        if view.cross_domain_allowed:
+                            # add an 'options' for this specific path to make it CORS friendly
+                            app.router.add_route('options', path, view.preflight_response)
+
         handler = app.make_handler(access_log=cls._logger)
         return handler
 
@@ -211,8 +276,8 @@ class Host:
         if not cls.ronin:
             if cls._tcp_service:
                 asyncio.get_event_loop().run_until_complete(cls._tcp_service.tcp_bus.connect())
-            if cls._http_service:
-                asyncio.get_event_loop().run_until_complete(cls._http_service.tcp_bus.connect())
+                # if cls._http_service:
+                #     asyncio.get_event_loop().run_until_complete(cls._http_service.tcp_bus.connect())
         if tcp_server:
             cls._logger.info('Serving TCP on {}'.format(tcp_server.sockets[0].getsockname()))
         if http_server:
@@ -262,12 +327,11 @@ class Host:
 
     @classmethod
     def _setup_logging(cls):
-        service = cls._tcp_service if cls._tcp_service else cls._http_service
-        identifier = '{}_{}'.format(service.name, service.socket_address[1])
+        identifier = '{}'.format(cls.service_name)
         setup_logging(identifier)
         if cls._smtp_handler:
             logger = logging.getLogger()
             logger.addHandler(cls._smtp_handler)
-        Stats.service_name = service.name
-        Aggregator._service_name = service.name
+        Stats.service_name = cls.service_name
+        Aggregator._service_name = cls.service_name
         Aggregator.periodic_aggregated_stats_logger()
