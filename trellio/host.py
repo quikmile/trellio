@@ -56,7 +56,7 @@ class Host:
                   http_host: str = '127.0.0.1', http_port: int = 8000,
                   tcp_host: str = '127.0.0.1', tcp_port: int = 8001, ssl_context=None,
                   registry_host: str = "0.0.0.0", registry_port: int = 4500,
-                  pubsub_host: str = "0.0.0.0", pubsub_port: int = 6379):
+                  pubsub_host: str = "0.0.0.0", pubsub_port: int = 6379, ronin: bool = False):
         """ A convenience method for providing registry and pubsub(redis) endpoints
 
         :param host_name: Used for process name
@@ -77,6 +77,7 @@ class Host:
         Host.pubsub_host = pubsub_host
         Host.pubsub_port = pubsub_port
         Host.ssl_context = ssl_context
+        Host.ronin = ronin
 
     @classmethod
     def get_http_service(cls):

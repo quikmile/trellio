@@ -47,7 +47,7 @@ class ConfigHandler:
     middleware_key = 'MIDDLEWARES'
     signal_key = 'SIGNALS'
     service_name_key = 'SERVICE_NAME'
-    host_name = 'HOST_NAME'
+    host_name_key = 'HOST_NAME'
     service_version_key = 'SERVICE_VERSION'
     reg_host_key = "REGISTRY_HOST"
     reg_port_key = "REGISTRY_PORT"
@@ -93,9 +93,24 @@ class ConfigHandler:
             subscribers.append(s)
         return subscribers
 
+    def configure_host(self, host):
+        host.configure(
+            host_name=self.settings[self.host_name_key],
+            service_name=self.settings[self.service_name_key],
+            http_host=self.settings[self.http_host_key],
+            http_port=self.settings[self.http_port_key],
+            tcp_host=self.settings[self.tcp_host_key],
+            tcp_port=self.settings[self.tcp_port_key],
+            registry_host=self.settings[self.reg_host_key],
+            registry_port=self.settings[self.reg_port_key],
+            pubsub_host=self.settings[self.redis_host_key],
+            pubsub_port=self.settings[self.reg_port_key],
+            ronin=self.settings[self.ronin_key]
+        )
+
     def setup_host(self):
         host = self.host
-
+        self.configure_host(host)
         publisher = self.get_publisher()
         subscribers = self.get_subscribers()
         if publisher:
@@ -111,12 +126,6 @@ class ConfigHandler:
         tcp_views = self.get_tcp_views()
 
         self.enable_signals()
-        host.registry_host = self.settings[self.reg_host_key]
-        host.registry_port = self.settings[self.reg_port_key]
-        host.pubsub_host = self.settings[self.redis_host_key]
-        host.pubsub_port = self.settings[self.redis_port_key]
-        host.ronin = self.settings[self.ronin_key]
-        host.name = self.settings[self.host_name]
         self.enable_middlewares(http_service=http_service, http_views=http_views)
 
         if http_service:
@@ -131,10 +140,10 @@ class ConfigHandler:
                 tcp_service.clients = http_service.clients
 
         if http_views:
-            host.attach_http_views()
+            host.attach_http_views(http_views)
 
         if tcp_views:
-            host.attach_tcp_views()
+            host.attach_tcp_views(tcp_views)
 
         host._smtp_handler = self.get_smtp_logging_handler()
 

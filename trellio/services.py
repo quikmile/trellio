@@ -9,12 +9,13 @@ from functools import wraps, partial
 from again.utils import unique_hex
 from aiohttp.web import Response
 
-from .views import HTTPView
 from .exceptions import RequestException, ClientException, TrellioServiceException
 from .packet import MessagePacket
 from .utils.helpers import Singleton  # we need non singleton subclasses
+from .utils.helpers import default_preflight_response
 from .utils.ordered_class_member import OrderedClassMembers
 from .utils.stats import Aggregator, Stats
+from .views import HTTPView
 
 API_TIMEOUT = 60 * 10
 
@@ -573,14 +574,6 @@ class TCPService(_ServiceHost):
                   'type': _Service._RES_PKT_STR,
                   'payload': payload}
         return packet
-
-
-def default_preflight_response(request):
-    headers = {'Access-Control-Allow-Origin': '*',
-               'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE',
-               'Access-Control-Allow-Headers': 'Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Authorization, Access-Control-Request-Method, Access-Control-Request-Headers',
-               'Access-Control-Allow-Credentials': 'true'}
-    return Response(status=204, headers=headers)
 
 
 class HTTPService(_ServiceHost, metaclass=OrderedClassMembers):

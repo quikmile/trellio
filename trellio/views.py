@@ -1,12 +1,10 @@
-from abc import ABCMeta
-
-from trellio.services import default_preflight_response
-from .utils.ordered_class_member import OrderedClassMembers
-
 __all__ = ['HTTPView', 'TCPView']
 
+from .utils.helpers import default_preflight_response
+from .utils.ordered_class_member import OrderedClassMembers
 
-class BaseView(metaclass=ABCMeta):
+
+class BaseView:
     '''base class for views'''
     _host = None
 
