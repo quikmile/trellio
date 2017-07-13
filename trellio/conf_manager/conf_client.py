@@ -193,7 +193,7 @@ class ConfigHandler:
                                                mailport=self.settings[self.smtp_key]['smtp_port'],
                                                fromaddr=self.settings[self.smtp_key]['smtp_user'],
                                                toaddrs=self.settings[self.admin_emails],
-                                               subject='Error {} {}:{}'.format(self.settings[self.host_name],
+                                               subject='Error {} {}:{}'.format(self.settings[self.host_name_key],
                                                                                self.settings[
                                                                                    self.service_name_key].upper(),
                                                                                self.settings[self.service_version_key]),
