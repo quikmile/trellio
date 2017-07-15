@@ -148,15 +148,6 @@ class Host:
             warnings.warn('TCP service is already attached')
 
     @classmethod
-    def attach_tcp_view(cls, tcp_views: list):
-        views_instances = []
-        for view_class in tcp_views:
-            instance = view_class()
-            instance.host = Host
-            views_instances.append(instance)
-        cls._tcp_views.extend(views_instances)
-
-    @classmethod
     def attach_http_views(cls, http_views: list):
         views_instances = []
         for view_class in http_views:

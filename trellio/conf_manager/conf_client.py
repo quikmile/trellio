@@ -139,11 +139,20 @@ class ConfigHandler:
             if http_service:
                 tcp_service.clients = http_service.clients
 
+
         if http_views:
             host.attach_http_views(http_views)
+            for view_inst in host.get_tcp_views():
+                pass
 
         if tcp_views:
             host.attach_tcp_views(tcp_views)
+            _tcp_service = host.get_tcp_service()
+            for view in host.get_tcp_views():
+                for each in view.__ordered__:
+                    fn = getattr(view, each)
+                    if callable(fn) and getattr(fn, 'is_api', False):
+                        setattr(_tcp_service,fn.__name__,fn)
 
         host._smtp_handler = self.get_smtp_logging_handler()
 
