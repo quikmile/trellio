@@ -4,7 +4,6 @@ from again.utils import unique_hex
 from .utils.helpers import default_preflight_response
 from .utils.ordered_class_member import OrderedClassMembers
 
-
 class BaseView:
     '''base class for views'''
     _host = None
@@ -56,6 +55,7 @@ class TCPView(BaseTCPView):
     @staticmethod
     def _make_response_packet(request_id: str, from_id: str, entity: str, result: object, error: object,
                               failed: bool, old_api=None, replacement_api=None):
+        from .services import _Service
         if failed:
             payload = {'request_id': request_id, 'error': error, 'failed': failed}
         else:
