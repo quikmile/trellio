@@ -1,0 +1,19 @@
+{
+	"HOST_NAME": "test_serviceA",
+	"SERVICE_NAME": "serviceA",
+	"SERVICE_VERSION": 1,
+	"REGISTRY_HOST": "127.0.0.1",
+	"REGISTRY_PORT": 4500,
+	"REDIS_HOST": "127.0.0.1",
+	"REDIS_PORT": 6379,
+	"HOST": "127.0.0.1",
+	"HTTP_HOST": "127.0.0.1",
+	"TCP_HOST": "127.0.0.1",
+	"HTTP_PORT": 8001,
+	"TCP_PORT": 8002,
+	"SIGNALS": {},
+	"APPS": [
+		"appA",
+		"appB"
+	]
+}
