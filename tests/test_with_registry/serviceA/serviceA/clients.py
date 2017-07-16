@@ -1,4 +1,4 @@
-from ....trellio.services import TCPServiceClient,request
+from trellio.services import TCPServiceClient,request
 
 
 class ServiceBCLient(TCPServiceClient):

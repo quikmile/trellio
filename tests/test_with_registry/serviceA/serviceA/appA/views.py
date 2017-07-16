@@ -1,5 +1,5 @@
-from .....trellio.views import HTTPView,TCPView
-from .....trellio.services import api,get
+from trellio.views import HTTPView,TCPView
+from trellio.services import api,get
 from ..clients import ServiceBCLient
 
 

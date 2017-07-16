@@ -1,5 +1,5 @@
-from .....trellio.views import TCPView
-from .....trellio.services import api
+from trellio.views import TCPView
+from trellio.services import api
 
 
 class TCPView1(TCPView):
