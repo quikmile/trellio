@@ -1,5 +1,6 @@
 __all__ = ['HTTPView', 'TCPView']
 
+from again.utils import unique_hex
 from .utils.helpers import default_preflight_response
 from .utils.ordered_class_member import OrderedClassMembers
 
@@ -51,3 +52,21 @@ class BaseTCPView(BaseView):
 class TCPView(BaseTCPView):
     def __init__(self):
         super(TCPView, self).__init__()
+
+    @staticmethod
+    def _make_response_packet(request_id: str, from_id: str, entity: str, result: object, error: object,
+                              failed: bool, old_api=None, replacement_api=None):
+        if failed:
+            payload = {'request_id': request_id, 'error': error, 'failed': failed}
+        else:
+            payload = {'request_id': request_id, 'result': result}
+        if old_api:
+            payload['old_api'] = old_api
+            if replacement_api:
+                payload['replacement_api'] = replacement_api
+        packet = {'pid': unique_hex(),
+                  'to': from_id,
+                  'entity': entity,
+                  'type': _Service._RES_PKT_STR,
+                  'payload': payload}
+        return packet

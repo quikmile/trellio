@@ -193,7 +193,21 @@ class TCPBus:
                 self._logger.warn('wrongly routed packet: ', packet)
 
     def _request_receiver(self, packet, protocol):
-        api_fn = getattr(self.tcp_host, packet['endpoint'])
+        api_fn = None
+        try:
+            api_fn = getattr(self.tcp_host, packet['endpoint'])
+        except AttributeError:
+            pass
+        if not api_fn:
+            for view in self.tcp_host.tcp_views:
+                _api_fn = None
+                try:
+                    _api_fn = getattr(view,packet['endpoint'])
+                except AttributeError:
+                    pass
+                if _api_fn:
+                    api_fn = _api_fn
+                    break
         if api_fn.is_api:
             from_node_id = packet['from']
             entity = packet['entity']

@@ -4,6 +4,7 @@ import json
 import logging
 import os
 
+from trellio.services import TCPService
 from ..utils.log_handlers import BufferingSMTPHandler
 
 GLOBAL_CONFIG = {
@@ -133,11 +134,15 @@ class ConfigHandler:
             host.attach_service(http_service)
             http_service.clients = [i() for i in http_clients + tcp_clients]
 
-        if tcp_service:
+        if not tcp_service:
+            if host.tcp_host and host.tcp_port:
+                tcp_service = TCPService(host.service_name,host.service_version,host.tcp_host,host.tcp_port)
             # self.register_tcp_views(tcp_service)
-            host.attach_service(tcp_service)
-            if http_service:
-                tcp_service.clients = http_service.clients
+
+        host.attach_service(tcp_service)
+
+        if http_service:
+            tcp_service.clients = http_service.clients
 
 
         if http_views:
@@ -148,11 +153,7 @@ class ConfigHandler:
         if tcp_views:
             host.attach_tcp_views(tcp_views)
             _tcp_service = host.get_tcp_service()
-            for view in host.get_tcp_views():
-                for each in view.__ordered__:
-                    fn = getattr(view, each)
-                    if callable(fn) and getattr(fn, 'is_api', False):
-                        setattr(_tcp_service,fn.__name__,fn)
+            _tcp_service.tcp_views = tcp_views
 
         host._smtp_handler = self.get_smtp_logging_handler()
 
