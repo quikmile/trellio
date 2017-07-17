@@ -4,6 +4,7 @@ from again.utils import unique_hex
 from .utils.helpers import default_preflight_response
 from .utils.ordered_class_member import OrderedClassMembers
 
+
 class BaseView:
     '''base class for views'''
     _host = None
