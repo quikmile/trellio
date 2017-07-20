@@ -81,7 +81,7 @@ class TCPBus:
         clients = self.tcp_host.clients if self.tcp_host else self.http_host.clients
         for client in clients:
             if isinstance(client, (TCPServiceClient, HTTPServiceClient)):
-                client.bus = self
+                client.tcp_bus = self
         self._service_clients = clients
         yield from self._registry_client.connect()
 
@@ -202,7 +202,7 @@ class TCPBus:
             for view in self.tcp_host.tcp_views:
                 _api_fn = None
                 try:
-                    _api_fn = getattr(view,packet['endpoint'])
+                    _api_fn = getattr(view, packet['endpoint'])
                 except AttributeError:
                     pass
                 if _api_fn:

@@ -4,7 +4,7 @@ import json
 import logging
 import os
 
-from trellio.services import TCPService
+from trellio.services import TCPService, HTTPService
 from ..utils.log_handlers import BufferingSMTPHandler
 
 GLOBAL_CONFIG = {
@@ -98,6 +98,7 @@ class ConfigHandler:
         host.configure(
             host_name=self.settings[self.host_name_key],
             service_name=self.settings[self.service_name_key],
+            service_version=self.settings[self.service_version_key],
             http_host=self.settings[self.http_host_key],
             http_port=self.settings[self.http_port_key],
             tcp_host=self.settings[self.tcp_host_key],
@@ -126,6 +127,12 @@ class ConfigHandler:
         http_views = self.get_http_views()
         tcp_views = self.get_tcp_views()
 
+        if not http_service:
+            http_service = HTTPService(host.service_name, host.service_version, host.http_host, host.http_port)
+
+        if not tcp_service:
+            tcp_service = TCPService(host.service_name, host.service_version, host.tcp_host, host.tcp_port)
+
         self.enable_signals()
         self.enable_middlewares(http_service=http_service, http_views=http_views)
 
@@ -133,17 +140,12 @@ class ConfigHandler:
             # self.register_http_views(http_service)
             host.attach_service(http_service)
             http_service.clients = [i() for i in http_clients + tcp_clients]
-
-        if not tcp_service:
-            if host.tcp_host and host.tcp_port:
-                tcp_service = TCPService(host.service_name,host.service_version,host.tcp_host,host.tcp_port)
             # self.register_tcp_views(tcp_service)
 
         host.attach_service(tcp_service)
 
         if http_service:
             tcp_service.clients = http_service.clients
-
 
         if http_views:
             host.attach_http_views(http_views)

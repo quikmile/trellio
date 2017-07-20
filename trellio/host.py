@@ -52,7 +52,7 @@ class Host:
     _smtp_handler = None
 
     @classmethod
-    def configure(cls, host_name: str = '', service_name: str = '',
+    def configure(cls, host_name: str = '', service_name: str = '', service_version='',
                   http_host: str = '127.0.0.1', http_port: int = 8000,
                   tcp_host: str = '127.0.0.1', tcp_port: int = 8001, ssl_context=None,
                   registry_host: str = "0.0.0.0", registry_port: int = 4500,
@@ -68,6 +68,7 @@ class Host:
         """
         Host.host_name = host_name
         Host.service_name = service_name
+        Host.service_version = str(service_version)
         Host.http_host = http_host
         Host.http_port = http_port
         Host.tcp_host = tcp_host
