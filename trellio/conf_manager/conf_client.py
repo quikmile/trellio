@@ -155,7 +155,7 @@ class ConfigHandler:
         if tcp_views:
             host.attach_tcp_views(tcp_views)
             _tcp_service = host.get_tcp_service()
-            _tcp_service.tcp_views = tcp_views
+            _tcp_service.tcp_views = host._tcp_views
 
         host._smtp_handler = self.get_smtp_logging_handler()
 
