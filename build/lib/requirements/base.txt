@@ -15,5 +15,4 @@ python-json-logger==0.1.7
 PyYAML==3.12
 setproctitle==1.1.10
 six==1.10.0
-uvloop==0.8.0
 yarl==0.10.0

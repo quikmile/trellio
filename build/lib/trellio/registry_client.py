@@ -10,15 +10,10 @@ from .packet import ControlPacket
 from .pinger import TCPPinger
 from .protocol_factory import get_trellio_protocol
 
-try:
-    from uvloop.loop import TCPTransport as Transport
-except ImportError:
-    from asyncio.transports import Transport
-
 
 def _retry_for_result(result):
     if isinstance(result, tuple):
-        return not isinstance(result[0], Transport) or not isinstance(result[1], asyncio.Protocol)
+        return not isinstance(result[0], asyncio.transports.Transport) or not isinstance(result[1], asyncio.Protocol)
     return True
 
 

@@ -6,9 +6,8 @@ import ssl
 import time
 from collections import defaultdict, namedtuple
 from functools import partial
-
-from again.utils import natural_sort
 from aiohttp import web
+from again.utils import natural_sort
 
 from .packet import ControlPacket
 from .pinger import TCPPinger
@@ -43,7 +42,7 @@ class Repository:
         service_name = self._get_full_service_name(service.name, service.version)
         service_entry = (service.host, service.port, service.node_id, service.type)
         self._registered_services[service.name][service.version].append(service_entry)
-        # in future there can be multiple nodes for same service, for load balancing purposes
+        #in future there can be multiple nodes for same service, for load balancing purposes
         self._pending_services[service_name].append(service.node_id)
         self._uptimes[service_name][service.host] = {
             'uptime': int(time.time()),
@@ -280,17 +279,16 @@ class Registry:
 
     def _handle_pending_registrations(self):
         for name, version in self._repository.get_pending_services():
-            dependencies = self._repository.get_dependencies(name, version)  # list
+            dependencies = self._repository.get_dependencies(name, version)#list
             should_activate = True
             for dependency in dependencies:
-                instances = self._repository.get_versioned_instances(dependency['name'], dependency['version'])  # list
+                instances = self._repository.get_versioned_instances(dependency['name'], dependency['version'])#list
                 tcp_instances = [instance for instance in instances if instance[3] == 'tcp']
-                if not len(
-                        tcp_instances):  # means the dependency doesn't have an activated tcp service, so registration
-                    # pending
+                if not len(tcp_instances):#means the dependency doesn't have an activated tcp service, so registration
+                    #pending
                     should_activate = False
                     break
-            for node in self._repository.get_pending_instances(name, version):  # node is node id
+            for node in self._repository.get_pending_instances(name, version):#node is node id
                 if should_activate:
                     self._send_activated_packet(name, version, node)
                     self._repository.remove_pending_instance(name, version, node)
@@ -393,7 +391,6 @@ class Registry:
         else:
             self._pong(packet, protocol)
 
-
 async def registry_dump_handle(request):
     '''
     only read
@@ -411,7 +408,6 @@ async def registry_dump_handle(request):
 
 if __name__ == '__main__':
     from setproctitle import setproctitle
-
     setproctitle("trellio-registry")
     REGISTRY_HOST = None
     REGISTRY_PORT = 4500

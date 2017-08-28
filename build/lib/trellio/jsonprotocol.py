@@ -35,7 +35,8 @@ class JSONProtocol(asyncio.Protocol):
     def connection_made(self, transport):
         self._connected = True
         self._transport = transport
-        # self._transport.send = self._transport.write
+
+        self._transport.send = self._transport.write
         self._send_q = SendQueue(transport, self.is_connected)
 
         self.set_streamer()

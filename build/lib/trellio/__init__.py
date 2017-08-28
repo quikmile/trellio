@@ -5,17 +5,6 @@ __all__ = ['Host', 'TCPServiceClient', 'TCPService', 'HTTPService', 'HTTPService
            'TCPView', 'ManagementRegistry', 'InvalidCMDArguments', 'execute_from_command_line', 'Publisher',
            'Subscriber']
 
-import logging
-
-logger = logging.getLogger(__name__)
-try:
-    import asyncio
-    import uvloop
-
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-except ImportError:
-    logger.warning('uvloop is not install, event loop will be set to default asyncio loop')
-
 from .conf_manager import *
 from .exceptions import RequestException, TrellioServiceError, TrellioServiceException  # noqa
 from .host import Host  # noqa
@@ -29,4 +18,4 @@ from .utils.log import setup_logging  # noqa
 from .views import HTTPView, TCPView
 from .wrappers import Response, Request  # noqa
 
-__version__ = '1.1.29'
+__version__ = '1.1.29rc7'
