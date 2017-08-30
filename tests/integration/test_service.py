@@ -25,8 +25,7 @@ if __name__ == "__main__":
     tcp_service = TestTCPService()
     http_service = TestHTTPService()
     Host.configure()
-    Host.http_workers = 2
-    Host.tcp_workers = 1
+    Host.workers = 4
     Host.attach_tcp_service(tcp_service)
     Host.attach_http_service(http_service)
     Host.run()

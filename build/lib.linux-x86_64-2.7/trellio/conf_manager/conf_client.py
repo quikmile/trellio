@@ -21,7 +21,6 @@ GLOBAL_CONFIG = {
     "TCP_HOST": "",
     "HTTP_PORT": "",
     "TCP_PORT": "",
-    "WORKERS": 1,
     "SIGNALS": {},
     "MIDDLEWARES": [],
     "APPS": [],
@@ -63,7 +62,6 @@ class ConfigHandler:
     ronin_key = "RONIN"
     smtp_key = 'SMTP_SETTINGS'
     apps_key = 'APPS'
-    workers = "WORKERS"
 
     # service_path_key = "SERVICE_PATH"
 
@@ -109,8 +107,7 @@ class ConfigHandler:
             registry_port=self.settings[self.reg_port_key],
             pubsub_host=self.settings[self.redis_host_key],
             pubsub_port=self.settings[self.reg_port_key],
-            ronin=self.settings[self.ronin_key],
-            workers=self.settings[self.workers]
+            ronin=self.settings[self.ronin_key]
         )
 
     def setup_host(self):
