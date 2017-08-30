@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import multiprocessing
 import os
 import signal
+import socket
 import warnings
 from functools import partial
 
@@ -16,6 +18,9 @@ from .signals import ServiceReady
 from .utils.decorators import deprecated
 from .utils.log import setup_logging
 from .utils.stats import Stats, Aggregator
+
+signames = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items()))
+                if v.startswith('SIG') and not v.startswith('SIG_'))
 
 
 class Host:
@@ -40,6 +45,9 @@ class Host:
     tcp_port = None
     ssl_context = None
     ronin = False  # If true, the trellio service runs solo without a registry
+    debug = False
+    http_workers = 1
+    tcp_workers = 1
 
     _host_id = None
     _tcp_service = None
@@ -50,13 +58,15 @@ class Host:
     _http_views = []
     _logger = logging.getLogger(__name__)
     _smtp_handler = None
+    _workers = set()
 
     @classmethod
     def configure(cls, host_name: str = '', service_name: str = '', service_version='',
                   http_host: str = '127.0.0.1', http_port: int = 8000,
                   tcp_host: str = '127.0.0.1', tcp_port: int = 8001, ssl_context=None,
                   registry_host: str = "0.0.0.0", registry_port: int = 4500,
-                  pubsub_host: str = "0.0.0.0", pubsub_port: int = 6379, ronin: bool = False):
+                  pubsub_host: str = "0.0.0.0", pubsub_port: int = 6379, ronin: bool = False,
+                  http_workers: int = 1, tcp_workers: int = 1, debug: bool = False):
         """ A convenience method for providing registry and pubsub(redis) endpoints
 
         :param host_name: Used for process name
@@ -79,6 +89,9 @@ class Host:
         Host.pubsub_port = pubsub_port
         Host.ssl_context = ssl_context
         Host.ronin = ronin
+        Host.debug = debug
+        Host.tcp_workers = tcp_workers
+        Host.http_workers = http_workers
 
     @classmethod
     def get_http_service(cls):
@@ -204,30 +217,13 @@ class Host:
     def _stop(cls, signame: str):
         cls._logger.info('\ngot signal {} - exiting'.format(signame))
         asyncio.get_event_loop().stop()
+        for worker in cls._workers:
+            worker.terminate()
 
     @classmethod
     def _set_signal_handlers(cls):
         asyncio.get_event_loop().add_signal_handler(getattr(signal, 'SIGINT'), partial(cls._stop, 'SIGINT'))
         asyncio.get_event_loop().add_signal_handler(getattr(signal, 'SIGTERM'), partial(cls._stop, 'SIGTERM'))
-
-    @classmethod
-    def _create_tcp_server(cls):
-        if cls._tcp_service:
-            ssl_context = cls._tcp_service.ssl_context
-            host_ip, host_port = cls._tcp_service.socket_address
-            task = asyncio.get_event_loop().create_server(partial(get_trellio_protocol, cls._tcp_service.tcp_bus),
-                                                          host_ip, host_port, ssl=ssl_context)
-            result = asyncio.get_event_loop().run_until_complete(task)
-            return result
-
-    @classmethod
-    def _create_http_server(cls):
-        if cls._http_service or cls._http_views:
-            host_ip, host_port = cls.http_host, cls.http_port
-            ssl_context = cls.ssl_context
-            handler = cls._make_aiohttp_handler()
-            task = asyncio.get_event_loop().create_server(handler, host_ip, host_port, ssl=ssl_context)
-            return asyncio.get_event_loop().run_until_complete(task)
 
     @classmethod
     def _make_aiohttp_handler(cls):
@@ -263,36 +259,110 @@ class Host:
         cls._host_id = uuid4()
 
     @classmethod
-    def _start_server(cls):
-        tcp_server = cls._create_tcp_server()
-        http_server = cls._create_http_server()
-        if not cls.ronin:
-            if cls._tcp_service:
+    def _create_tcp_server(cls, *, sock, host, port):
+        if cls._tcp_service:
+            ssl_context = cls._tcp_service.ssl_context
+            task = asyncio.get_event_loop().create_server(partial(get_trellio_protocol, cls._tcp_service.tcp_bus),
+                                                          sock=sock, ssl=ssl_context)
+            tcp_server = asyncio.get_event_loop().run_until_complete(task)
+
+            if not cls.ronin:
                 asyncio.get_event_loop().run_until_complete(cls._tcp_service.tcp_bus.connect())
-                # if cls._http_service:
-                #     asyncio.get_event_loop().run_until_complete(cls._http_service.tcp_bus.connect())
-        if tcp_server:
-            cls._logger.info('Serving TCP on {}'.format(tcp_server.sockets[0].getsockname()))
-        if http_server:
-            cls._logger.info('Serving HTTP on {}'.format(http_server.sockets[0].getsockname()))
+
+            if tcp_server:
+                cls._logger.info('Serving TCP on {}'.format(tcp_server.sockets[0].getsockname()))
+
+            asyncio.get_event_loop().run_until_complete(ServiceReady._run())
+
+            try:
+                asyncio.get_event_loop().run_forever()
+            except Exception as e:
+                print(e)
+            finally:
+                if tcp_server:
+                    tcp_server.close()
+                    asyncio.get_event_loop().run_until_complete(tcp_server.wait_closed())
+
+                asyncio.get_event_loop().close()
+
+    @classmethod
+    def _create_http_server(cls, *, sock, host, port):
+        if cls._http_service or cls._http_views:
+            ssl_context = cls.ssl_context
+            handler = cls._make_aiohttp_handler()
+            task = asyncio.get_event_loop().create_server(handler, sock=sock, ssl=ssl_context)
+            http_server = asyncio.get_event_loop().run_until_complete(task)
+
+            if http_server:
+                cls._logger.info('Serving HTTP on {}'.format(http_server.sockets[0].getsockname()))
+
+            try:
+                asyncio.get_event_loop().run_forever()
+            except Exception as e:
+                print(e)
+            finally:
+                if http_server:
+                    http_server.close()
+                    asyncio.get_event_loop().run_until_complete(http_server.wait_closed())
+
+                asyncio.get_event_loop().close()
+
+    @classmethod
+    def _create_sock(cls, host, port):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((host, port))
+        os.set_inheritable(sock.fileno(), True)
+
+        return sock
+
+    @classmethod
+    def _start_workers(cls, worker_num, target, sock, host, port):
+        workers = set()
+        for _ in range(worker_num or 1):
+            worker = multiprocessing.Process(
+                target=target,
+                kwargs=dict(sock=sock, host=host, port=port))
+            worker.daemon = True
+            worker.start()
+            workers.add(worker)
+        return workers
+
+    @classmethod
+    def _join_workers(cls, workers: set):
+        for worker in workers:
+            worker.join()
+
+            if worker.exitcode > 0:
+                print('Worker exited with code {}'.format(worker.exitcode))
+            elif worker.exitcode < 0:
+                try:
+                    signame = signames[-worker.exitcode]
+                except KeyError:
+                    print(
+                        'Worker crashed with unknown code {}!'
+                            .format(worker.exitcode))
+                else:
+                    print('Worker crashed on signal {}!'.format(signame))
+
+    @classmethod
+    def _start_server(cls):
+        # tcp_sock = cls._create_sock(cls.tcp_host, cls.tcp_port)
+        # tcp_workers = cls._start_workers(cls.tcp_workers, cls._create_tcp_server, tcp_sock, cls.tcp_host, cls.tcp_port)
+        # tcp_sock.close()
+        #
+        # cls._join_workers(tcp_workers)
+
+        http_sock = cls._create_sock(cls.tcp_host, cls.tcp_port)
+        http_workers = cls._start_workers(cls.http_workers, cls._create_http_server, http_sock, cls.http_host,
+                                          cls.http_port)
+        http_sock.close()
+
+        cls._join_workers(http_workers)
+
         cls._logger.info("Event loop running forever, press CTRL+C to interrupt.")
         cls._logger.info("pid %s: send SIGINT or SIGTERM to exit." % os.getpid())
         cls._logger.info("Triggering ServiceReady signal")
-        asyncio.get_event_loop().run_until_complete(ServiceReady._run())
-        try:
-            asyncio.get_event_loop().run_forever()
-        except Exception as e:
-            print(e)
-        finally:
-            if tcp_server:
-                tcp_server.close()
-                asyncio.get_event_loop().run_until_complete(tcp_server.wait_closed())
-
-            if http_server:
-                http_server.close()
-                asyncio.get_event_loop().run_until_complete(http_server.wait_closed())
-
-            asyncio.get_event_loop().close()
 
     @classmethod
     def _start_pubsub(cls):
