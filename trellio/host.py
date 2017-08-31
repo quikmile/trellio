@@ -1,4 +1,5 @@
 import asyncio
+import faulthandler
 import logging
 import multiprocessing
 import os
@@ -7,7 +8,9 @@ import socket
 import warnings
 from functools import partial
 
+import uvloop
 from aiohttp.web import Application
+from japronto.protocol.creaper import Reaper
 
 from .bus import TCPBus
 from .protocol_factory import get_trellio_protocol
@@ -57,6 +60,10 @@ class Host:
     _logger = None
     _smtp_handler = None
     _workers = set()
+    _reaper = None
+    _reaper_settings = {}
+    _loop = uvloop.new_event_loop()
+    _connections = set()
 
     @classmethod
     def configure(cls, host_name: str = '', service_name: str = '', service_version='',
@@ -93,6 +100,7 @@ class Host:
         Host.ronin = ronin
         Host.debug = debug
         Host.num_workers = workers
+        Host._reaper = Reaper(cls, **cls._reaper_settings)
 
     @classmethod
     def get_http_service(cls):
@@ -203,7 +211,7 @@ class Host:
             # cls._set_host_id()
             # cls._setup_logging()
             # cls._set_signal_handlers()
-            cls._start_pubsub()
+            # cls._start_pubsub()
             cls._start_server()
         else:
             cls._logger.error('No services to host')
@@ -211,8 +219,7 @@ class Host:
     @classmethod
     def _set_process_name(cls, worker=1):
         from setproctitle import setproctitle
-        print('trellio_{}_{}-{}'.format(cls.host_name, cls._host_id, worker))
-        setproctitle('trellio_{}_{}-{}'.format(cls.host_name, cls._host_id, worker))
+        setproctitle('trellio_{}-{}'.format(cls.host_name, worker))
 
     @classmethod
     def _stop(cls, signame: str):
@@ -277,10 +284,14 @@ class Host:
 
     @classmethod
     def _create_server(cls, http_sock=None, tcp_sock=None, worker=None):
+        faulthandler.enable()
+
         cls._logger = logging.getLogger(__name__)
-        cls._set_host_id()
+        # cls._set_host_id()
         cls._set_process_name(worker)
-        cls._setup_logging()
+        cls._setup_logging(worker)
+
+        cls._start_pubsub()
 
         tcp_server = cls._create_tcp_server(tcp_sock)
         http_server = cls._create_http_server(http_sock)
@@ -288,7 +299,6 @@ class Host:
         if tcp_server:
             if not cls.ronin:
                 asyncio.get_event_loop().run_until_complete(cls._tcp_service.tcp_bus.connect())
-            cls._logger.info('Serving TCP on {}'.format(tcp_server.sockets[0].getsockname()))
 
         if http_server:
             cls._logger.info('Serving HTTP on {}'.format(http_server.sockets[0].getsockname()))
@@ -316,6 +326,8 @@ class Host:
                 http_server.close()
                 asyncio.get_event_loop().run_until_complete(http_server.wait_closed())
 
+            asyncio.get_event_loop().run_until_complete(cls.drain())
+            cls._reaper.stop()
             asyncio.get_event_loop().close()
 
     @classmethod
@@ -332,7 +344,7 @@ class Host:
         for i in range(worker_num or 1):
             worker = multiprocessing.Process(
                 target=target,
-                kwargs=dict(http_sock=http_sock, tcp_sock=tcp_sock, worker=i))
+                kwargs=dict(http_sock=http_sock, tcp_sock=tcp_sock, worker=i + 1))
             worker.daemon = True
             worker.start()
             cls._workers.add(worker)
@@ -391,8 +403,8 @@ class Host:
         # service.pubsub_bus = pubsub_bus
 
     @classmethod
-    def _setup_logging(cls):
-        identifier = '{}'.format(cls.service_name)
+    def _setup_logging(cls, worker):
+        identifier = '{}-{}'.format(cls.service_name, worker)
         setup_logging(identifier)
         if cls._smtp_handler:
             logger = logging.getLogger()
@@ -400,3 +412,50 @@ class Host:
         Stats.service_name = cls.service_name
         Aggregator._service_name = cls.service_name
         Aggregator.periodic_aggregated_stats_logger()
+
+    @classmethod
+    def _get_idle_and_busy_connections(cls):
+        # FIXME if there is buffered data in gather the connections should be
+        # considered busy, now it's idle
+        return [c for c in cls._connections if c.pipeline_empty], [c for c in cls._connections if not c.pipeline_empty]
+
+    @classmethod
+    async def drain(cls):
+        # TODO idle connections will close connection with half-read requests
+        idle, busy = cls._get_idle_and_busy_connections()
+        for c in idle:
+            c.transport.close()
+        # for c in busy_connections:
+        #            need to implement something that makes protocol.on_data
+        #            start rejecting incoming data
+        #            this closes transport unfortunately
+        #            sock = c.transport.get_extra_info('socket')
+        #            sock.shutdown(socket.SHUT_RD)
+
+        if idle or busy:
+            print('Draining connections...')
+        else:
+            return
+
+        if idle:
+            print('{} idle connections closed immediately'.format(len(idle)))
+        if busy:
+            print('{} connections busy, read-end closed'.format(len(busy)))
+
+        for x in range(5, 0, -1):
+            await asyncio.sleep(1)
+            idle, busy = cls._get_idle_and_busy_connections()
+            for c in idle:
+                c.transport.close()
+            if not busy:
+                break
+            else:
+                print(
+                    "{} seconds remaining, {} connections still busy"
+                        .format(x, len(busy)))
+
+        _, busy = cls._get_idle_and_busy_connections()
+        if busy:
+            print('Forcefully killing {} connections'.format(len(busy)))
+        for c in busy:
+            c.pipeline_cancel()
