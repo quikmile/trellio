@@ -1,6 +1,8 @@
+import os
+
 from aiohttp.web_response import Response
 
-from trellio import TCPService, api, Host, HTTPService, get
+from trellio import TCPService, api, HTTPService, get, Host
 
 
 class TestTCPService(TCPService):
@@ -8,8 +10,9 @@ class TestTCPService(TCPService):
         super(TestTCPService, self).__init__('test_service', '1', host_ip='127.0.0.1', host_port=8001)
 
     @api
-    async def echo(self):
-        return "echo"
+    async def echo(self, q):
+        print(q, os.getpid())
+        return q
 
 
 class TestHTTPService(HTTPService):

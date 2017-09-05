@@ -57,11 +57,13 @@ class Host:
     _subscribers = []
     _tcp_views = []
     _http_views = []
-    _logger = None
+    _logger = logging.getLogger(__name__)
     _smtp_handler = None
     _workers = set()
     _reaper = None
     _reaper_settings = {}
+    _http_server = None
+    _tcp_server = None
     _loop = uvloop.new_event_loop()
     _connections = set()
 
@@ -219,7 +221,7 @@ class Host:
     @classmethod
     def _set_process_name(cls, worker=1):
         from setproctitle import setproctitle
-        setproctitle('trellio_{}-{}'.format(cls.host_name, worker))
+        setproctitle('trellio_{}_{}-{}'.format(cls.host_name, cls._host_id, worker))
 
     @classmethod
     def _stop(cls, signame: str):
@@ -271,7 +273,7 @@ class Host:
         if cls._tcp_service:
             ssl_context = cls._tcp_service.ssl_context
             task = asyncio.get_event_loop().create_server(partial(get_trellio_protocol, cls._tcp_service.tcp_bus),
-                                                          sock=sock, ssl=ssl_context)
+                                                          sock=sock, ssl=ssl_context, reuse_port=True)
             return asyncio.get_event_loop().run_until_complete(task)
 
     @classmethod
@@ -279,42 +281,33 @@ class Host:
         if cls._http_service or cls._http_views:
             ssl_context = cls.ssl_context
             handler = cls._make_aiohttp_handler()
-            task = asyncio.get_event_loop().create_server(handler, sock=sock, ssl=ssl_context)
+            task = asyncio.get_event_loop().create_server(handler, sock=sock, ssl=ssl_context, reuse_port=True)
             return asyncio.get_event_loop().run_until_complete(task)
 
     @classmethod
-    def _create_server(cls, http_sock=None, tcp_sock=None, worker=None):
+    def _create_server(cls, http_sock=None, tcp_sock=None, worker=1):
         faulthandler.enable()
 
-        cls._logger = logging.getLogger(__name__)
-        # cls._set_host_id()
+        cls._set_host_id()
         cls._set_process_name(worker)
-        cls._setup_logging(worker)
-
+        cls._setup_logging()
         cls._start_pubsub()
 
         tcp_server = cls._create_tcp_server(tcp_sock)
         http_server = cls._create_http_server(http_sock)
 
-        if tcp_server:
-            if not cls.ronin:
+        if not cls.ronin:
+            if cls._tcp_service and worker == 1:
                 asyncio.get_event_loop().run_until_complete(cls._tcp_service.tcp_bus.connect())
 
-        if http_server:
-            cls._logger.info('Serving HTTP on {}'.format(http_server.sockets[0].getsockname()))
+        print("spawned trellio worker {} (pid {})".format(worker, os.getpid()))
 
         asyncio.get_event_loop().run_until_complete(ServiceReady._run())
-
-        cls._logger.info("Event loop running forever, press CTRL+C to interrupt.")
-        cls._logger.info("pid %s: send SIGINT or SIGTERM to exit." % os.getpid())
-        cls._logger.info("Triggering ServiceReady signal")
 
         cls._set_signal_handlers()
 
         try:
             asyncio.get_event_loop().run_forever()
-
-
         except Exception as e:
             print(e)
         finally:
@@ -373,8 +366,15 @@ class Host:
 
         cls._start_workers(cls.num_workers, cls._create_server, http_sock, tcp_sock)
 
-        tcp_sock.close()
-        http_sock.close()
+        cls._logger.info("Event loop running forever, press CTRL+C to interrupt.")
+        cls._logger.info("pid %s: send SIGINT or SIGTERM to exit." % os.getpid())
+        cls._logger.info("Triggering ServiceReady signal")
+
+        if tcp_sock:
+            cls._logger.info('Serving TCP on {}'.format(tcp_sock.getsockname()))
+
+        if http_sock:
+            cls._logger.info('Serving HTTP on {}'.format(http_sock.getsockname()))
 
         cls._join_workers()
 
@@ -403,8 +403,8 @@ class Host:
         # service.pubsub_bus = pubsub_bus
 
     @classmethod
-    def _setup_logging(cls, worker):
-        identifier = '{}-{}'.format(cls.service_name, worker)
+    def _setup_logging(cls):
+        identifier = '{}'.format(cls.service_name)
         setup_logging(identifier)
         if cls._smtp_handler:
             logger = logging.getLogger()

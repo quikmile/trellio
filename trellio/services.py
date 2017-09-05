@@ -546,6 +546,15 @@ class TCPService(_ServiceHost):
     def __init__(self, service_name, service_version, host_ip=None, host_port=None, ssl_context=None):
         super(TCPService, self).__init__(service_name, service_version, host_ip, host_port)
         self._ssl_context = ssl_context
+        self._registered = False
+
+    # @property
+    # def registered(self):
+    #     return self._registered
+    #
+    # @registered.setter
+    # def registered(self, flag):
+    #     self._registered = flag
 
     @property
     def ssl_context(self):

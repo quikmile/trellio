@@ -10,7 +10,7 @@ class BaseSignal:
 
     @classmethod
     async def _run(cls, *args, **kwargs):
-        print('service ready run called')
+        #print('service ready run called')
         for i in cls._registry_list:
             try:
                 await i[0](*args, **kwargs)
