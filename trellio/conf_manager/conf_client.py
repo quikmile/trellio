@@ -302,4 +302,4 @@ class ConfigHandler:
                 if child not in subclasses:
                     subclasses.add(child)
                     work.append(child)
-        return subclasses
+        return list(subclasses)
