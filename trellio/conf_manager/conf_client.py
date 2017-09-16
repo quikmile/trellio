@@ -75,17 +75,17 @@ class ConfigHandler:
 
     def get_tcp_clients(self):
         from trellio.services import TCPServiceClient
-        tcp_clients = TCPServiceClient.__subclasses__()
+        tcp_clients = self.inheritors(TCPServiceClient)
         return tcp_clients
 
     def get_http_clients(self):
         from trellio.services import HTTPServiceClient
-        http_clients = HTTPServiceClient.__subclasses__()
+        http_clients = self.inheritors(HTTPServiceClient)
         return http_clients
 
     def get_subscribers(self):
         from trellio.pubsub import Subscriber
-        subscriber_classes = Subscriber.__subclasses__()
+        subscriber_classes = self.inheritors(Subscriber)
         subscribers = []
         for subs in subscriber_classes:
             s = subs()
@@ -251,11 +251,11 @@ class ConfigHandler:
 
     def get_http_views(self):
         from trellio.views import HTTPView
-        return HTTPView.__subclasses__()
+        return self.inheritors(HTTPView)
 
     def get_tcp_views(self):
         from trellio.views import TCPView
-        return TCPView.__subclasses__()
+        return self.inheritors(TCPView)
 
     def import_class_from_path(self, path):
         broken = path.split('.')
@@ -291,3 +291,15 @@ class ConfigHandler:
             for j in signal_dict[i]:
                 recv_module, recv_coro = self.import_class_from_path(j)
                 signal_class.register(recv_coro)  # registering reciever
+
+    @staticmethod
+    def inheritors(klass):
+        subclasses = set()
+        work = [klass]
+        while work:
+            parent = work.pop()
+            for child in parent.__subclasses__():
+                if child not in subclasses:
+                    subclasses.add(child)
+                    work.append(child)
+        return subclasses
