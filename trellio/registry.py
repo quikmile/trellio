@@ -14,6 +14,7 @@ from .packet import ControlPacket
 from .pinger import TCPPinger
 from .protocol_factory import get_trellio_protocol
 from .utils.log import setup_logging
+import os
 
 Service = namedtuple('Service', ['name', 'version', 'dependencies', 'host', 'port', 'node_id', 'type'])
 
@@ -181,7 +182,7 @@ class Registry:
         registry_dump_handle.registry = self
         app.router.add_get('/registry/dump/', registry_dump_handle)
         handler = app.make_handler(access_log=self.logger)
-        task = asyncio.get_event_loop().create_server(handler, self._ip, 8008)
+        task = asyncio.get_event_loop().create_server(handler, self._ip, os.environ.get('TRELLIO_HTTP_PORT', 4501))
         http_server = asyncio.get_event_loop().run_until_complete(task)
         return http_server
 
