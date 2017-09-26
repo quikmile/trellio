@@ -7,6 +7,8 @@ import os
 from trellio.services import TCPService, HTTPService
 from ..utils.log_handlers import BufferingSMTPHandler
 
+logger = logging.getLogger(__name__)
+
 GLOBAL_CONFIG = {
     "RONIN": False,
     "HOST_NAME": "",
@@ -171,20 +173,20 @@ class ConfigHandler:
         self.settings = new_settings
         parent_dir = os.getcwd().split('/')[-1]
         client_path = parent_dir + '.clients'
-        service_path1 = parent_dir + '.service'
-        service_path2 = parent_dir + '.services'
+        service_path = parent_dir + '.service'
+
         try:
-            try:
-                importlib.import_module(client_path)
-            except:
-                pass
-            try:
-                importlib.import_module(service_path1)
-            except:
-                pass
-            importlib.import_module(service_path2)
+            importlib.import_module(client_path)
         except:
-            pass
+            logger.warning('No clients found')
+
+        service_imported = True
+        service_exception = None
+        try:
+            importlib.import_module(service_path)
+        except Exception as e:
+            service_imported = False
+            service_exception = e.__traceback__
 
         if self.settings.get(self.apps_key):
             apps = self.settings[self.apps_key]
@@ -192,8 +194,11 @@ class ConfigHandler:
                 views_path = parent_dir + '.{}.views'.format(app)
                 try:
                     importlib.import_module(views_path)
-                except:
-                    pass
+                except Exception as e:
+                    print(e.__traceback__)
+        else:
+            if not service_imported:
+                print(service_exception)
 
     def get_smtp_logging_handler(self):
         if self.settings.get(self.smtp_key):
