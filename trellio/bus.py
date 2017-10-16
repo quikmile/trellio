@@ -66,6 +66,12 @@ class TCPBus:
         self._registered = False
         self._logger = logging.getLogger(__name__)
 
+    def on_client_disconnected_or_not_found(self):
+        return asyncio.ensure_future(self.connect())
+
+    def done_client_reconnect(self, fn, future):
+        return fn()
+
     def _create_service_clients(self):
         futures = []
         for sc in self._service_clients:
@@ -117,21 +123,33 @@ class TCPBus:
         Sends a request to a server from a ServiceClient
         auto dispatch method called from self.send()
         """
-        node_id = self._get_node_id_for_packet(packet)
-        client_protocol = self._client_protocols.get(node_id)
+        try:
+            node_id = self._get_node_id_for_packet(packet)
+            client_protocol = self._client_protocols.get(node_id)
 
-        if node_id and client_protocol:
-            if client_protocol.is_connected():
-                packet['to'] = node_id
-                client_protocol.send(packet)
-                return True
+            if node_id and client_protocol:
+                if client_protocol.is_connected():
+                    packet['to'] = node_id
+                    client_protocol.send(packet)
+                    return True
+                else:
+                    self._logger.error('Client protocol is not connected for packet %s', packet)
+                    raise ClientDisconnected()
             else:
-                self._logger.error('Client protocol is not connected for packet %s', packet)
-                raise ClientDisconnected()
-        else:
-            # No node found to send request
-            self._logger.error('Out of %s, Client Not found for packet %s', self._client_protocols.keys(), packet)
-            raise ClientNotFoundError()
+                # No node found to send request
+                self._logger.error('Out of %s, Client Not found for packet %s', self._client_protocols.keys(), packet)
+                raise ClientNotFoundError()
+        except ClientDisconnected:
+            f = self.on_client_disconnected_or_not_found()
+            done = self.done_callback_recreate_clients(partial(self.done_callback_recreate_clients(fn=partial(self._request_sender(packet)))))#doing same req
+            f.add_done_callback(done)
+        except ClientNotFoundError:
+            f = self.on_client_disconnected_or_not_found()
+            done = self.done_callback_recreate_clients(partial(self.done_callback_recreate_clients(fn=partial(self._request_sender(packet)))))#doing same req
+            f.add_done_callback(done)
+
+    def done_callback_recreate_clients(self, fn, future=None):
+        return fn()
 
     def _connect_to_client(self, host, node_id, port, service_type, service_client):
 
