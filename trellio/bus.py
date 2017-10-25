@@ -141,11 +141,13 @@ class TCPBus:
                 raise ClientNotFoundError()
         except ClientDisconnected:
             f = self.on_client_disconnected_or_not_found()
-            done = self.done_callback_recreate_clients(partial(self.done_callback_recreate_clients(fn=partial(self._request_sender(packet)))))#doing same req
+            done = self.done_callback_recreate_clients(partial(
+                self.done_callback_recreate_clients(fn=partial(self._request_sender(packet)))))  # doing same req
             f.add_done_callback(done)
         except ClientNotFoundError:
             f = self.on_client_disconnected_or_not_found()
-            done = self.done_callback_recreate_clients(partial(self.done_callback_recreate_clients(fn=partial(self._request_sender(packet)))))#doing same req
+            done = self.done_callback_recreate_clients(partial(
+                self.done_callback_recreate_clients(fn=partial(self._request_sender(packet)))))  # doing same req
             f.add_done_callback(done)
 
     def done_callback_recreate_clients(self, fn, future=None):
