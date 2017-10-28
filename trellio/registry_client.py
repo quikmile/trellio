@@ -53,7 +53,7 @@ class RegistryClient:
     def conn_handler(self, handler):
         self._conn_handler = handler
 
-    def register(self, ip, port, service, version, node_id, vendors, service_type):
+    def register(self, ip, port, service, version, node_id, vendors, service_type):  # here vendors are tcp/http_clients
         self._service = service
         self._version = version
         self._node_ids[service_type] = node_id
