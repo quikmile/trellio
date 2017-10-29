@@ -448,7 +448,7 @@ class TCPServiceClient(Singleton, _Service):
             warning = 'Deprecated API: ' + payload['old_api']
             if 'replacement_api' in payload:
                 warning += ', New API: ' + payload['replacement_api']
-            logging.getLogger().warn(warning)
+            logging.getLogger().warning(warning)
         future = self._pending_requests.pop(request_id)
         if has_result:
             if not future.done() and not future.cancelled():
