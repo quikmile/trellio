@@ -76,13 +76,13 @@ class TCPBus:
                     futures.append(future)
         return asyncio.gather(*futures, return_exceptions=False)
 
-    async def connect(self):
+    def connect(self):
         clients = self.tcp_host.clients if self.tcp_host else self.http_host.clients
         for client in clients:
             if isinstance(client, (TCPServiceClient, HTTPServiceClient)):
                 client.tcp_bus = self
         self._service_clients = clients
-        await self._registry_client.connect()
+        yield from self._registry_client.connect()
 
     def register(self):
         if self.tcp_host:
@@ -137,9 +137,6 @@ class TCPBus:
             if tcp_server:
                 asyncio.get_event_loop().run_until_complete(self.connect())
                 self._logger.info('Restarted TCP Server on {}'.format(tcp_server.sockets[0].getsockname()))
-
-    def done_callback_recreate_clients(self, fn, future=None):
-        return fn()
 
     def _connect_to_client(self, host, node_id, port, service_type, service_client):
 
