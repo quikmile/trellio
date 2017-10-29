@@ -36,10 +36,7 @@ class JSONProtocol(asyncio.Protocol):
 
         self._connected = True
         self._transport = transport
-        try:
-            self._transport.send = self._transport.write
-        except Exception as e:
-            self.logger.error(str(e))
+        #self._transport.send = self._transport.write
         self._send_q = SendQueue(transport, self.is_connected)
         self.set_streamer()
         self._send_q.send()
