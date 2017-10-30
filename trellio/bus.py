@@ -108,16 +108,6 @@ class TCPBus:
         func = getattr(self, '_' + packet['type'] + '_sender')
         asyncio.ensure_future(func(packet))
 
-    def reconnect(self, node_id, service_name, service_version):
-        print(locals())
-        service_props = self._registry_client.get_for_node(node_id)
-        if service_props is not None:
-            host, port, _node_id, _type = service_props
-            sc = [sc for sc in self._service_clients if sc.name == service_name and sc.version == service_version]
-            print(sc, sc[0].name)
-            if sc:
-                asyncio.ensure_future(self._connect_to_client(host, node_id, port, _type, sc[0]))
-
     @retry(should_retry_for_result=lambda x: not x, should_retry_for_exception=lambda x: True, timeout=None,
            max_attempts=5, multiplier=2)
     def _request_sender(self, packet: dict):
@@ -132,7 +122,8 @@ class TCPBus:
             if not client_protocol.is_connected():
                 self._logger.error('Client protocol is not connected for packet %s, retrying connection...',
                                    packet)
-                self.reconnect(node_id, packet['name'], packet['version'])
+                sc = self._node_clients[node_id]
+                sc.handle_connection_lost()
 
             packet['to'] = node_id
             client_protocol.send(packet)
