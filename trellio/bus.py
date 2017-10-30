@@ -109,6 +109,7 @@ class TCPBus:
         asyncio.ensure_future(func(packet))
 
     def reconnect(self, node_id, service_name, service_version):
+        print(locals())
         service_props = self._registry_client.get_for_node(node_id)
         if service_props is not None:
             host, port, _node_id, _type = service_props
