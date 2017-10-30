@@ -73,3 +73,5 @@ __pycache__/
 trellio/__pycache__/
 trellio/utils/__pycache__/
 *.pyc
+
+build/
