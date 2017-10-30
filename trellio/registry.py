@@ -320,6 +320,12 @@ class Registry:
             #    self._http_pingers[(host, port)] = pinger
             #    pinger.ping()
 
+    def handle_connection_lost(self):
+        for name, versions in self._repository._registered_services.items():
+            for version, instances in versions.items():
+                for host, port, node_id, service_type in instances:
+                    self._connect_to_service(host, port, node_id, service_type)
+
     def _handle_service_connection(self, node_id, host, port, future):
         transport, protocol = future.result()
         self._service_protocols[node_id] = protocol

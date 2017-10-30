@@ -91,6 +91,9 @@ class RegistryClient:
         self._pinger.ping(payload=self._node_ids)
         return self._transport, self._protocol
 
+    def handle_connection_lost(self):
+        asyncio.ensure_future(self.connect())
+
     def on_timeout(self, host, port, node_id):
         asyncio.ensure_future(self.connect())
 

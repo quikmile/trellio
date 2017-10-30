@@ -8,9 +8,11 @@ from functools import wraps, partial
 
 from again.utils import unique_hex
 from aiohttp.web import Response
+from retrial.retrial import retry
 
 from .exceptions import RequestException, ClientException, TrellioServiceException
 from .packet import MessagePacket
+from .registry_client import _retry_for_result, _retry_for_exception
 from .utils.helpers import Singleton  # we need non singleton subclasses
 from .utils.helpers import default_preflight_response
 from .utils.ordered_class_member import OrderedClassMembers
@@ -425,11 +427,16 @@ class TCPServiceClient(_Service):
         _Service.time_future(future, timeout)
         return future
 
+    @retry(should_retry_for_result=_retry_for_result, should_retry_for_exception=_retry_for_exception,
+           strategy=[0, 2, 4, 8, 16, 32])
     def handle_connection_lost(self):
         for host, port, node_id, service_type in self.tcp_bus._registry_client.get_all_addresses(*self.properties):
             if service_type == 'tcp':
                 self.tcp_bus._node_clients[node_id] = self
-                ensure_future(self.tcp_bus._connect_to_client(host, node_id, port, service_type, self))
+                transport, protocol = yield from ensure_future(self.tcp_bus._connect_to_client(host,
+                                                                                               node_id, port,
+                                                                                               service_type, self))
+                return transport, protocol
 
     def receive(self, packet: dict, protocol, transport):
         if packet['type'] == 'ping':

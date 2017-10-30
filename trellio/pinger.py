@@ -62,7 +62,7 @@ class Pinger:
     def _on_timeout(self, payload=None):
         if self._failures < self._max_failures:
             self._failures += 1
-            asyncio.async(self.send_ping(payload=payload))
+            asyncio.ensure_future(self.send_ping(payload=payload))
         else:
             self._handler.on_timeout()
 
@@ -79,7 +79,7 @@ class TCPPinger:
         self._handler = handler
 
     def ping(self, payload=None):
-        asyncio.async(self._pinger.send_ping(payload=payload))
+        asyncio.ensure_future(self._pinger.send_ping(payload=payload))
 
     def send_ping(self, payload=None):
         self._protocol.send(ControlPacket.ping(self._node_id, payload=payload))

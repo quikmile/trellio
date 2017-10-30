@@ -115,7 +115,7 @@ DEFAULT_CONFIG_YAML = """
 
     loggers:
         registry:
-            handlers: [service,]
+            handlers: [stream,]
             level: INFO
 
         stats:

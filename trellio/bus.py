@@ -83,6 +83,9 @@ class TCPBus:
         self._service_clients = clients
         yield from self._registry_client.connect()
 
+    def handle_connection_lost(self):
+        self.connect()
+
     def register(self):
         if self.tcp_host:
             self._registry_client.register(self.tcp_host.host, self.tcp_host.port, self.tcp_host.name,
