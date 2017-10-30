@@ -1,13 +1,12 @@
 import asyncio
 import logging
-from asyncio.coroutines import coroutine
 from functools import partial
 
 import aiohttp
 from again.utils import unique_hex
 from retrial.retrial import retry
 
-from .exceptions import ClientNotFoundError, ClientDisconnected
+from .exceptions import ClientNotFoundError
 from .packet import ControlPacket, MessagePacket
 from .protocol_factory import get_trellio_protocol
 from .services import TCPServiceClient, HTTPServiceClient
@@ -102,12 +101,21 @@ class TCPBus:
         sc = next(sc for sc in self._service_clients if sc.name == service and sc.version == version)
         if type == 'tcp':
             self._node_clients[node_id] = sc
-            asyncio.async(self._connect_to_client(host, node_id, port, type, sc))
+            asyncio.ensure_future(self._connect_to_client(host, node_id, port, type, sc))
 
     def send(self, packet: dict):
         packet['from'] = self._host_id
         func = getattr(self, '_' + packet['type'] + '_sender')
         asyncio.ensure_future(func(packet))
+
+    def reconnect(self, node_id, service_name, service_version):
+        service_props = self._registry_client.get_for_node(node_id)
+        if service_props is not None:
+            host, port, _node_id, _type = service_props
+            sc = [sc for sc in self._service_clients if sc.name == service_name and sc.version == service_version]
+            print(sc, sc[0].name)
+            if sc:
+                asyncio.ensure_future(self._connect_to_client(host, node_id, port, _type, sc[0]))
 
     @retry(should_retry_for_result=lambda x: not x, should_retry_for_exception=lambda x: True, timeout=None,
            max_attempts=5, multiplier=2)
@@ -123,7 +131,7 @@ class TCPBus:
             if not client_protocol.is_connected():
                 self._logger.error('Client protocol is not connected for packet %s, retrying connection...',
                                    packet)
-                asyncio.get_event_loop().run_until_complete(self.connect())
+                self.reconnect(node_id, packet['name'], packet['version'])
 
             packet['to'] = node_id
             client_protocol.send(packet)
@@ -132,15 +140,10 @@ class TCPBus:
             # No node found to send request
             self._logger.error('Out of %s, Client Not found for packet %s, restarting server...',
                                self._client_protocols.keys(), packet)
-            from .host import Host
-            tcp_server = Host._create_tcp_server()
-            if tcp_server:
-                asyncio.get_event_loop().run_until_complete(self.connect())
-                self._logger.info('Restarted TCP Server on {}'.format(tcp_server.sockets[0].getsockname()))
+            raise ClientNotFoundError()
 
     def _connect_to_client(self, host, node_id, port, service_type, service_client):
-
-        future = asyncio.async(
+        future = asyncio.ensure_future(
             asyncio.get_event_loop().create_connection(partial(get_trellio_protocol, service_client), host, port,
                                                        ssl=service_client._ssl_context))
         future.add_done_callback(
@@ -154,7 +157,7 @@ class TCPBus:
         #     pinger = Pinger(self, asyncio.get_event_loop())
         #     self._pingers[node_id] = pinger
         #     pinger.register_tcp_service(protocol, node_id)
-        #     asyncio.async(pinger.start_ping())
+        #     asyncio.ensure_future(pinger.start_ping())
         self._client_protocols[node_id] = protocol  # stores connection(sockets)
 
     @staticmethod
@@ -167,7 +170,7 @@ class TCPBus:
 
     def _handle_pong(self, node_id, count):
         pinger = self._pingers[node_id]
-        asyncio.async(pinger.pong_received(count))
+        asyncio.ensure_future(pinger.pong_received(count))
 
     def _get_node_id_for_packet(self, packet):
         service, version, entity = packet['name'], packet['version'], packet['entity']
@@ -181,7 +184,7 @@ class TCPBus:
         self._logger.info('service client props {}'.format(service_props))
         if service_props is not None:
             host, port, _node_id, _type = service_props
-            asyncio.async(self._connect_to_client(host, _node_id, port, _type))
+            asyncio.ensure_future(self._connect_to_client(host, _node_id, port, _type))
 
     def receive(self, packet: dict, protocol, transport):
         if packet['type'] == 'ping':
@@ -216,7 +219,7 @@ class TCPBus:
         if api_fn.is_api:
             from_node_id = packet['from']
             entity = packet['entity']
-            future = asyncio.async(api_fn(from_id=from_node_id, entity=entity, **packet['payload']))
+            future = asyncio.ensure_future(api_fn(from_id=from_node_id, entity=entity, **packet['payload']))
 
             def send_result(f):
                 result_packet = f.result()
@@ -232,7 +235,7 @@ class TCPBus:
         for client in self._service_clients:
             if client.name == service and client.version == version:
                 fun = getattr(client, endpoint)
-                asyncio.async(fun(payload))
+                asyncio.ensure_future(fun(payload))
         protocol.send(MessagePacket.ack(publish_id))
 
     def handle_connected(self):
@@ -274,8 +277,8 @@ class TCPBus:
 #
 #     def publish(self, service, version, endpoint, payload):
 #         endpoint_key = self._get_pubsub_key(service, version, endpoint)
-#         asyncio.async(self._pubsub_handler.publish(endpoint_key, json.dumps(payload, cls=TrellioEncoder)))
-#         asyncio.async(self.xpublish(service, version, endpoint, payload))
+#         asyncio.ensure_future(self._pubsub_handler.publish(endpoint_key, json.dumps(payload, cls=TrellioEncoder)))
+#         asyncio.ensure_future(self.xpublish(service, version, endpoint, payload))
 #
 #     def xpublish(self, service, version, endpoint, payload):
 #         subscribers = yield from self._registry_client.get_subscribers(service, version, endpoint)
@@ -285,7 +288,7 @@ class TCPBus:
 #                 (subscriber['host'], subscriber['port'], subscriber['node_id'], subscriber['strategy']))
 #         for key, value in strategies.items():
 #             publish_id = str(uuid.uuid4())
-#             future = asyncio.async(
+#             future = asyncio.ensure_future(
 #                 self._connect_and_publish(publish_id, service, version, endpoint, value, payload))
 #             self._pending_publishes[publish_id] = future
 #
@@ -300,7 +303,7 @@ class TCPBus:
 #         service, version, endpoint = endpoint.split('/')
 #         client = [sc for sc in self._clients if (sc.name == service and sc.version == version)][0]
 #         func = getattr(client, endpoint)
-#         asyncio.async(func(**json.loads(payload)))
+#         asyncio.ensure_future(func(**json.loads(payload)))
 #
 #     @staticmethod
 #     def _get_pubsub_key(service, version, endpoint):

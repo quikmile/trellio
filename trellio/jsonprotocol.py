@@ -33,13 +33,12 @@ class JSONProtocol(asyncio.Protocol):
         self._pending_data.clear()
 
     def connection_made(self, transport):
-
         self._connected = True
         self._transport = transport
         try:
             self._transport.send = self._transport.write
-        except Exception as e:
-            self.logger.error(str(e))
+        except:
+            pass
         self._send_q = SendQueue(transport, self.is_connected)
         self.set_streamer()
         self._send_q.send()
