@@ -132,7 +132,7 @@ def setup_logging(_):
     except:
         config_dict = yaml.load(DEFAULT_CONFIG_YAML)
 
-    logging.getLogger('asyncio').setLevel(logging.WARNING)
+    logging.getLogger('asyncio').setLevel(logging.DEBUG)
     logger = logging.getLogger()
     logger.handlers = []
     logger.addHandler = patch_add_handler(logger)

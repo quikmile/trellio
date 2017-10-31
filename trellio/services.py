@@ -3,16 +3,14 @@ import logging
 import setproctitle
 import socket
 import time
-from asyncio import iscoroutine, coroutine, wait_for, TimeoutError, Future, get_event_loop, ensure_future
+from asyncio import iscoroutine, coroutine, wait_for, TimeoutError, Future, get_event_loop, async
 from functools import wraps, partial
 
 from again.utils import unique_hex
 from aiohttp.web import Response
-from retrial.retrial import retry
 
 from .exceptions import RequestException, ClientException, TrellioServiceException
 from .packet import MessagePacket
-from .registry_client import _retry_for_result, _retry_for_exception
 from .utils.helpers import Singleton  # we need non singleton subclasses
 from .utils.helpers import default_preflight_response
 from .utils.ordered_class_member import OrderedClassMembers
@@ -74,7 +72,7 @@ def _get_subscribe_decorator(func):
         coroutine_func = func
         if not iscoroutine(func):
             coroutine_func = coroutine(func)
-        return (ensure_future(coroutine_func(*args, **kwargs)))
+        return (async(coroutine_func(*args, **kwargs)))
 
     return wrapper
 
@@ -397,14 +395,14 @@ class _Service:
         get_event_loop().call_later(timeout, timer_callback, future)
 
 
-class TCPServiceClient(_Service):
+class TCPServiceClient(Singleton, _Service):
     def __init__(self, service_name, service_version, ssl_context=None):
-        # if not self.has_inited():  # to maintain singleton behaviour
-        super(TCPServiceClient, self).__init__(service_name, service_version)
-        self._pending_requests = {}
-        self.tcp_bus = None
-        self._ssl_context = ssl_context
-        # self.init_done()
+        if not self.has_inited():  # to maintain singleton behaviour
+            super(TCPServiceClient, self).__init__(service_name, service_version)
+            self._pending_requests = {}
+            self.tcp_bus = None
+            self._ssl_context = ssl_context
+            self.init_done()
 
     @property
     def ssl_context(self):
@@ -426,17 +424,6 @@ class TCPServiceClient(_Service):
                 future.set_exception(exception)
         _Service.time_future(future, timeout)
         return future
-
-    @retry(should_retry_for_result=_retry_for_result, should_retry_for_exception=_retry_for_exception,
-           strategy=[0, 2, 4, 8, 16, 32])
-    def handle_connection_lost(self):
-        for host, port, node_id, service_type in self.tcp_bus._registry_client.get_all_addresses(*self.properties):
-            if service_type == 'tcp':
-                self.tcp_bus._node_clients[node_id] = self
-                transport, protocol = yield from ensure_future(self.tcp_bus._connect_to_client(host,
-                                                                                               node_id, port,
-                                                                                               service_type, self))
-                return transport, protocol
 
     def receive(self, packet: dict, protocol, transport):
         if packet['type'] == 'ping':

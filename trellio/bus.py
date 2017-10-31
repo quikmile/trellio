@@ -6,7 +6,7 @@ import aiohttp
 from again.utils import unique_hex
 from retrial.retrial import retry
 
-from .exceptions import ClientNotFoundError
+from .exceptions import ClientNotFoundError, ClientDisconnected
 from .packet import ControlPacket, MessagePacket
 from .protocol_factory import get_trellio_protocol
 from .services import TCPServiceClient, HTTPServiceClient
@@ -83,9 +83,6 @@ class TCPBus:
         self._service_clients = clients
         yield from self._registry_client.connect()
 
-    def handle_connection_lost(self):
-        self.connect()
-
     def register(self):
         if self.tcp_host:
             self._registry_client.register(self.tcp_host.host, self.tcp_host.port, self.tcp_host.name,
@@ -125,8 +122,8 @@ class TCPBus:
             if not client_protocol.is_connected():
                 self._logger.error('Client protocol is not connected for packet %s, retrying connection...',
                                    packet)
-                sc = self._node_clients[node_id]
-                sc.handle_connection_lost()
+                self.reconnect()
+                client_protocol = self._client_protocols[node_id]
 
             packet['to'] = node_id
             client_protocol.send(packet)
@@ -136,6 +133,12 @@ class TCPBus:
             self._logger.error('Out of %s, Client Not found for packet %s, restarting server...',
                                self._client_protocols.keys(), packet)
             raise ClientNotFoundError()
+
+    def reconnect(self):
+        from .host import Host
+        tcp_server = Host._create_tcp_server()
+        if tcp_server:
+            asyncio.run_coroutine_threadsafe(self.connect(), asyncio.get_event_loop())
 
     def _connect_to_client(self, host, node_id, port, service_type, service_client):
         future = asyncio.ensure_future(

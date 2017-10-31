@@ -102,10 +102,10 @@ class TrellioProtocol(JSONProtocol):
 
     def connection_lost(self, exc):
         super(TrellioProtocol, self).connection_lost(exc)
-        try:
-            self._handler.handle_connection_lost()
-        except Exception as e:
-            self.logger.exception(str(e))
+        # try:
+        #     self._handler.handle_connection_lost()
+        # except Exception as e:
+        #     self.logger.exception(str(e))
 
     def on_element(self, element):
         try:
