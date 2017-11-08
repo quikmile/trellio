@@ -15,7 +15,7 @@ try:
 
     asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 except ImportError:
-    logger.warning('uvloop is not install, event loop will be set to default asyncio loop')
+    logger.warning('uvloop is not installed, event loop will be set to default asyncio loop')
 
 from .conf_manager import *
 from .exceptions import RequestException, TrellioServiceError, TrellioServiceException  # noqa
