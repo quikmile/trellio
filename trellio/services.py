@@ -1,14 +1,17 @@
+import asyncio
 import json
 import logging
-import setproctitle
 import socket
 import time
 from asyncio import iscoroutine, coroutine, wait_for, TimeoutError, Future, get_event_loop, async
 from functools import wraps, partial
 
+import setproctitle
 from again.utils import unique_hex
 from aiohttp.web import Response
+from retrial.retrial.retry import retry
 
+from trellio.packet import ControlPacket
 from .exceptions import RequestException, ClientException, TrellioServiceException
 from .packet import MessagePacket
 from .utils.helpers import Singleton  # we need non singleton subclasses
@@ -469,6 +472,12 @@ class TCPServiceClient(Singleton, _Service):
         endpoint = packet['endpoint']
         func = getattr(self, endpoint)
         func(**packet['payload'])
+
+    def _handle_connection_lost(self):
+        vendor = self.tcp_bus._registry_client._get_full_service_name(self.name, self.version)
+        for host, port, node_id, service_type in self.tcp_bus._registry_client._available_services[vendor]:
+            packet = ControlPacket.deregister(self.name, self.version, node_id)
+            self.tcp_bus._registry_client._handle_deregistration(packet)
 
 
 class _ServiceHost(_Service):

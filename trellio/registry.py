@@ -180,7 +180,7 @@ class Registry:
     def _create_http_app(self):
         app = web.Application()
         registry_dump_handle.registry = self
-        app.router.add_get('/registry/dump/', registry_dump_handle)
+        app.router.add_get('/registry/', registry_dump_handle)
         handler = app.make_handler(access_log=self.logger)
         task = asyncio.get_event_loop().create_server(handler, self._ip, os.environ.get('TRELLIO_HTTP_PORT', 4501))
         http_server = asyncio.get_event_loop().run_until_complete(task)

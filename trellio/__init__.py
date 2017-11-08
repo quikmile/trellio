@@ -30,4 +30,4 @@ from .utils.log import setup_logging  # noqa
 from .views import HTTPView, TCPView
 from .wrappers import Response, Request  # noqa
 
-__version__ = '1.1.33rc24'
+__version__ = '1.1.33rc25'

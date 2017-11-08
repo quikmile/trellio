@@ -1,9 +1,9 @@
 from trellio import TCPService, api, Host
 
 
-class TestService(TCPService):
+class ServiceTest(TCPService):
     def __init__(self):
-        super(TestService, self).__init__('test_service', '1', host_ip='127.0.0.1', host_port=8001)
+        super().__init__('test_service', '1')
 
     @api
     async def echo(self):
@@ -11,8 +11,8 @@ class TestService(TCPService):
 
 
 if __name__ == "__main__":
-    test_service = TestService()
-    Host.configure()
+    test_service = ServiceTest()
+    Host.configure(tcp_port=8001)
 
     Host.attach_tcp_service(test_service)
     Host.run()

@@ -117,28 +117,30 @@ class TCPBus:
         """
         node_id = self._get_node_id_for_packet(packet)
         client_protocol = self._client_protocols.get(node_id)
-
         if node_id and client_protocol:
             if not client_protocol.is_connected():
                 self._logger.error('Client protocol is not connected for packet %s, retrying connection...',
                                    packet)
-                self.reconnect()
-                client_protocol = self._client_protocols[node_id]
-
-            packet['to'] = node_id
-            client_protocol.send(packet)
-            return True
+                raise ClientDisconnected()
+            else:
+                packet['to'] = node_id
+                client_protocol.send(packet)
+                return True
         else:
             # No node found to send request
             self._logger.error('Out of %s, Client Not found for packet %s, restarting server...',
                                self._client_protocols.keys(), packet)
             raise ClientNotFoundError()
 
-    def reconnect(self):
-        from .host import Host
-        tcp_server = Host._create_tcp_server()
-        if tcp_server:
-            asyncio.run_coroutine_threadsafe(self.connect(), asyncio.get_event_loop())
+    # def _handle_connection_lost(self, node_id):
+    #     result = self._registry_client.get_for_node(node_id)
+    #     print(result, self._registry_client._available_services.values(), self._node_clients[node_id])
+    #     if result:
+    #         host, port, node, service_type = result
+    #         service_client = self._node_clients[node_id]
+    #         future = self._connect_to_client(host, node, port, service_type, service_client)
+    #         result = yield from future.result()
+    #         print(result, self._client_protocols)
 
     def _connect_to_client(self, host, node_id, port, service_type, service_client):
         future = asyncio.ensure_future(

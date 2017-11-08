@@ -110,12 +110,12 @@ DEFAULT_CONFIG_YAML = """
             datefmt: '%Y-%m-%d %H:%M:%S,%f'
 
     root:
-        handlers: [stream,]
+        handlers: [stream]
         level: INFO
 
     loggers:
         registry:
-            handlers: [stream,]
+            handlers: [stream]
             level: INFO
 
         stats:
@@ -134,9 +134,9 @@ def setup_logging(_):
 
     logging.getLogger('asyncio').setLevel(logging.DEBUG)
     logger = logging.getLogger()
+    logger.propagate = False
     logger.handlers = []
     logger.addHandler = patch_add_handler(logger)
-
     logging.config.dictConfig(config_dict)
 
 
