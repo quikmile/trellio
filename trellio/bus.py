@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from asyncio.coroutines import iscoroutine, coroutine
 from functools import partial
 
 import aiohttp
@@ -106,7 +107,10 @@ class TCPBus:
     def send(self, packet: dict):
         packet['from'] = self._host_id
         func = getattr(self, '_' + packet['type'] + '_sender')
-        asyncio.ensure_future(func(packet))
+        wrapper_func = func
+        if not iscoroutine(func):
+            wrapper_func = coroutine(func)
+        asyncio.ensure_future(wrapper_func(packet))
 
     @retry(should_retry_for_result=lambda x: not x, should_retry_for_exception=lambda x: True, timeout=None,
            max_attempts=5, multiplier=2)
@@ -118,14 +122,13 @@ class TCPBus:
         node_id = self._get_node_id_for_packet(packet)
         client_protocol = self._client_protocols.get(node_id)
         if node_id and client_protocol:
-            if not client_protocol.is_connected():
-                self._logger.error('Client protocol is not connected for packet %s, retrying connection...',
-                                   packet)
-                raise ClientDisconnected()
-            else:
+            if client_protocol.is_connected():
                 packet['to'] = node_id
                 client_protocol.send(packet)
                 return True
+            else:
+                self._logger.error('Client protocol is not connected for packet %s', packet)
+                raise ClientDisconnected()
         else:
             # No node found to send request
             self._logger.error('Out of %s, Client Not found for packet %s, restarting server...',
