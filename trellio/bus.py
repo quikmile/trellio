@@ -112,8 +112,8 @@ class TCPBus:
             wrapper_func = coroutine(func)
         asyncio.ensure_future(wrapper_func(packet))
 
-    # @retry(should_retry_for_result=lambda x: not x, should_retry_for_exception=lambda x: True, timeout=None,
-    #        max_attempts=5, multiplier=2)
+    @retry(should_retry_for_result=lambda x: not x, should_retry_for_exception=lambda x: True, timeout=None,
+           max_attempts=5, multiplier=2)
     def _request_sender(self, packet: dict):
         """
         Sends a request to a server from a ServiceClient
