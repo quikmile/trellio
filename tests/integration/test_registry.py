@@ -20,10 +20,10 @@ class ServiceA(TCPService):
 
 class ServiceClientA(TCPServiceClient):
     def __init__(self):
-        super(ServiceClientA, self).__init__("service_a", "1")
+        super(ServiceClientA, self).__init__("raven", "1")
 
     @request
-    def echo(self, data):
+    def echo(self, data, test=True):
         return locals()
 
 
@@ -114,5 +114,5 @@ def test_service_b():
 
 if __name__ == "__main__":
     setup_module()
-    restart_service_a()
+    # restart_service_a()
     test_service_b()
